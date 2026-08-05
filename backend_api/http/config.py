@@ -21,7 +21,7 @@ CORS_ORIGINS = [
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg://labcd:labcd@localhost:5432/labcd",
+    "postgresql+psycopg://labcd:labcd@localhost:5433/labcd",
 )
 # Keep pool headroom for API requests while design jobs open short-lived sessions.
 DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
