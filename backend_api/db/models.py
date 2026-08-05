@@ -1,4 +1,4 @@
-"""ORM models for authentication, plans, permissions, and projects."""
+"""ORM models for authentication, plans, permissions, projects, and support."""
 
 from __future__ import annotations
 
@@ -132,6 +132,23 @@ class User(Base):
     )
     bug_reports: Mapped[list["BugReport"]] = relationship(
         "BugReport",
+        back_populates="user",
+        lazy="noload",
+    )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession",
+        back_populates="user",
+        foreign_keys="ChatSession.user_id",
+        lazy="noload",
+    )
+    assigned_chats: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession",
+        back_populates="agent",
+        foreign_keys="ChatSession.agent_id",
+        lazy="noload",
+    )
+    feature_requests: Mapped[list["FeatureRequest"]] = relationship(
+        "FeatureRequest",
         back_populates="user",
         lazy="noload",
     )
@@ -374,3 +391,191 @@ class BugReport(Base):
     fixed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User | None] = relationship("User", back_populates="bug_reports")
+
+
+class ChatSession(Base):
+    """Live support chat session between a user and an optional agent."""
+
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    agent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(40), default="open", nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship(
+        "User",
+        back_populates="chat_sessions",
+        foreign_keys=[user_id],
+    )
+    agent: Mapped[User | None] = relationship(
+        "User",
+        back_populates="assigned_chats",
+        foreign_keys=[agent_id],
+    )
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        "ChatMessage",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        lazy="noload",
+        order_by="ChatMessage.created_at",
+    )
+
+
+class ChatMessage(Base):
+    """Single message inside a live chat session."""
+
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_session_id: Mapped[int] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    sender_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    session: Mapped[ChatSession] = relationship("ChatSession", back_populates="messages")
+    sender: Mapped[User] = relationship("User")
+
+
+class FeatureRequest(Base):
+    """User-submitted product feature idea with voting and comments."""
+
+    __tablename__ = "feature_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(40),
+        default="submitted",
+        nullable=False,
+        index=True,
+    )
+    vote_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    user: Mapped[User] = relationship("User", back_populates="feature_requests")
+    votes: Mapped[list["FeatureRequestVote"]] = relationship(
+        "FeatureRequestVote",
+        back_populates="feature_request",
+        cascade="all, delete-orphan",
+        lazy="noload",
+    )
+    comments: Mapped[list["FeatureRequestComment"]] = relationship(
+        "FeatureRequestComment",
+        back_populates="feature_request",
+        cascade="all, delete-orphan",
+        lazy="noload",
+        order_by="FeatureRequestComment.created_at",
+    )
+
+
+class FeatureRequestVote(Base):
+    """One vote per user per feature request."""
+
+    __tablename__ = "feature_request_votes"
+    __table_args__ = (
+        UniqueConstraint(
+            "feature_request_id",
+            "user_id",
+            name="uq_feature_request_votes_request_user",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    feature_request_id: Mapped[int] = mapped_column(
+        ForeignKey("feature_requests.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    feature_request: Mapped[FeatureRequest] = relationship(
+        "FeatureRequest",
+        back_populates="votes",
+    )
+    user: Mapped[User] = relationship("User")
+
+
+class FeatureRequestComment(Base):
+    """Comment on a feature request."""
+
+    __tablename__ = "feature_request_comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    feature_request_id: Mapped[int] = mapped_column(
+        ForeignKey("feature_requests.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    comment: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    feature_request: Mapped[FeatureRequest] = relationship(
+        "FeatureRequest",
+        back_populates="comments",
+    )
+    user: Mapped[User] = relationship("User")

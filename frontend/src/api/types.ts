@@ -274,3 +274,116 @@ export interface BugReport {
 export interface BugReportSettings {
   enabled: boolean
 }
+
+// --- Live Chat ---
+
+export type ChatSessionStatus = 'open' | 'active' | 'closed'
+
+export interface ChatMessage {
+  id: number
+  chat_session_id: number
+  sender_id: number
+  sender_email: string | null
+  message: string
+  created_at: string
+}
+
+export interface ChatSession {
+  id: number
+  user_id: number
+  user_email: string | null
+  agent_id: number | null
+  agent_email: string | null
+  status: ChatSessionStatus | string
+  created_at: string
+  closed_at: string | null
+  messages?: ChatMessage[]
+}
+
+export interface ChatSessionListItem {
+  id: number
+  user_id: number
+  user_email: string | null
+  agent_id: number | null
+  agent_email: string | null
+  status: ChatSessionStatus | string
+  created_at: string
+  closed_at: string | null
+}
+
+export interface ChatSessionCreate {
+  message?: string | null
+}
+
+export interface ChatMessageCreate {
+  message: string
+}
+
+// --- Feature Requests ---
+
+export type FeatureRequestStatus =
+  | 'submitted'
+  | 'under_review'
+  | 'planned'
+  | 'in_progress'
+  | 'completed'
+  | 'rejected'
+
+export interface FeatureRequestComment {
+  id: number
+  feature_request_id: number
+  user_id: number
+  user_email: string | null
+  comment: string
+  created_at: string
+}
+
+export interface FeatureRequest {
+  id: number
+  user_id: number
+  user_email: string | null
+  title: string
+  description: string
+  status: FeatureRequestStatus | string
+  vote_count: number
+  created_at: string
+  updated_at: string
+  has_voted?: boolean
+  comments?: FeatureRequestComment[]
+}
+
+export interface FeatureRequestListItem {
+  id: number
+  user_id: number
+  user_email: string | null
+  title: string
+  description: string
+  status: FeatureRequestStatus | string
+  vote_count: number
+  created_at: string
+  updated_at: string
+  has_voted?: boolean
+}
+
+export interface FeatureRequestCreate {
+  title: string
+  description: string
+}
+
+export interface FeatureRequestUpdate {
+  title?: string
+  description?: string
+  status?: FeatureRequestStatus
+}
+
+export interface FeatureRequestCommentCreate {
+  comment: string
+}
+
+export interface FeatureRequestVoteOut {
+  id: number
+  feature_request_id: number
+  user_id: number
+  created_at: string
+  vote_count: number
+}
