@@ -17,7 +17,9 @@ from backend_api.http.routers import (
     auth,
     blog,
     bug_reports,
+    chats,
     errors,
+    feature_requests,
     health,
     site,
     survey,
@@ -90,6 +92,9 @@ def create_app() -> FastAPI:
     app.include_router(blog.router, prefix=API_PREFIX)
     app.include_router(survey.router, prefix=API_PREFIX)
     app.include_router(bug_reports.router, prefix=API_PREFIX)
+    app.include_router(chats.router, prefix=API_PREFIX)
+    app.include_router(chats.ws_router)  # /ws/chats/{chat_id} (no API prefix)
+    app.include_router(feature_requests.router, prefix=API_PREFIX)
     app.include_router(errors.router, prefix=API_PREFIX)
     app.mount(f"{API_PREFIX}/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
     return app
