@@ -137,7 +137,7 @@ export function AdminSitePage() {
   const menuPagination = useClientPagination(filteredMenus, { resetKey: menuLocation })
 
   if (!currentUser?.is_admin) {
-    return <Navigate to="/studio" replace />
+    return <Navigate to="/login" replace />
   }
 
   const saveBrand = async (event: FormEvent) => {

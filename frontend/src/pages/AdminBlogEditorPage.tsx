@@ -60,7 +60,7 @@ export function AdminBlogEditorPage() {
   }, [currentUser?.is_admin, load])
 
   if (!currentUser?.is_admin) {
-    return <Navigate to="/studio" replace />
+    return <Navigate to="/login" replace />
   }
 
   const handleSubmit = async (event: FormEvent) => {

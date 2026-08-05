@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Activity,
-  ArrowLeft,
   Bug,
   ClipboardList,
   FolderKanban,
@@ -40,7 +39,7 @@ export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (!user?.is_admin) {
-    return <Navigate to="/studio" replace />
+    return <Navigate to="/login" replace />
   }
 
   const handleLogout = () => {
@@ -116,14 +115,6 @@ export function AdminLayout() {
         </nav>
 
         <div className="space-y-3 border-t border-border p-4">
-          <Link
-            to="/studio"
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-text transition-colors hover:bg-surface-hover hover:text-foreground"
-            onClick={closeSidebar}
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-            Back to studio
-          </Link>
           <div className="rounded-xl border border-border-subtle bg-surface-muted px-3 py-2.5">
             <div className="truncate text-sm font-medium text-foreground">{user.email}</div>
             <div className="mt-0.5 text-[0.7rem] uppercase tracking-wide text-muted">

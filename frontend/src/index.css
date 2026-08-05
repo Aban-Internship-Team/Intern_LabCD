@@ -1051,6 +1051,44 @@
   opacity: 0.9;
 }
 
+.admin-markdown h1,
+.admin-markdown h2,
+.admin-markdown h3 {
+  margin: 0.75em 0 0.35em;
+  font-weight: 600;
+  color: var(--app-foreground);
+}
+
+.admin-markdown p,
+.admin-markdown ul,
+.admin-markdown ol {
+  margin: 0.5em 0;
+}
+
+.admin-markdown a {
+  color: var(--app-primary);
+  text-decoration: underline;
+}
+
+.admin-markdown code {
+  border-radius: 0.25rem;
+  background: var(--app-surface-muted);
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+}
+
+.admin-markdown pre {
+  overflow: auto;
+  border-radius: 0.5rem;
+  background: var(--app-surface-muted);
+  padding: 0.75rem 1rem;
+}
+
+.admin-markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .setup-animate-in,
   .setup-hero__icon-wrap,

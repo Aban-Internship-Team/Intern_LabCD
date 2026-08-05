@@ -86,7 +86,7 @@ export function AdminUsersPage() {
   const pagination = useClientPagination(filteredUsers, { resetKey: query })
 
   if (!currentUser?.is_admin) {
-    return <Navigate to="/studio" replace />
+    return <Navigate to="/login" replace />
   }
 
   const openCreate = () => {

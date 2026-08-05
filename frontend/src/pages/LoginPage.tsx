@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { btnPrimary, btnWide, cardPanel, fieldInput, fieldLabel, pageIntro } from '../lib/classes'
 
 export function LoginPage() {
-  const { user, loading, login } = useAuth()
+  const { user, loading, login, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -13,10 +13,11 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/studio'
+  const from = (location.state as { from?: string } | null)?.from ?? '/admin'
 
-  if (!loading && user) {
-    return <Navigate to={from} replace />
+  if (!loading && user?.is_admin) {
+    const target = from.startsWith('/admin') ? from : '/admin'
+    return <Navigate to={target} replace />
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -24,8 +25,14 @@ export function LoginPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await login(email.trim(), password)
-      navigate(from, { replace: true })
+      const loggedIn = await login(email.trim(), password)
+      if (!loggedIn.is_admin) {
+        logout()
+        setError('This app is admin-only. Ask an administrator to grant admin access.')
+        return
+      }
+      const target = from.startsWith('/admin') ? from : '/admin'
+      navigate(target, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -39,11 +46,17 @@ export function LoginPage() {
         <header>
           <h2 className="m-0 text-2xl font-semibold tracking-tight text-foreground">Sign in</h2>
           <p className={`${pageIntro} mt-2`}>
-            Use your email to access Single Loop or Multi Loop design for your account.
+            Sign in with your admin email to access the LabCD admin panel.
           </p>
         </header>
 
         {error && <StatusMessage type="error" message={error} />}
+        {!loading && user && !user.is_admin && (
+          <StatusMessage
+            type="error"
+            message="Your account is signed in but is not an admin. Sign out or ask an administrator for access."
+          />
+        )}
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-1">
           <label className={fieldLabel}>
@@ -72,6 +85,12 @@ export function LoginPage() {
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        {user && !user.is_admin && (
+          <button type="button" className={`${btnPrimary} ${btnWide}`} onClick={logout}>
+            Sign out
+          </button>
+        )}
 
         <p className="m-0 text-center text-sm text-muted-text">
           No account yet?{' '}

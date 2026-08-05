@@ -91,7 +91,7 @@ export function AdminPlansPage() {
   const pagination = useClientPagination(filteredPlans, { resetKey: query })
 
   if (!currentUser?.is_admin) {
-    return <Navigate to="/studio" replace />
+    return <Navigate to="/login" replace />
   }
 
   const toggleAction = (code: string) => {

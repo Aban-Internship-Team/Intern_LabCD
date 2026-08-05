@@ -1,23 +1,3 @@
-export interface JobResponse {
-  job_id: string
-  module: string
-  status: string
-}
-
-export interface JobStatusResponse {
-  job_id: string
-  module: string
-  status: string
-  metadata: Record<string, unknown>
-  error?: string
-}
-
-export interface UploadResponse {
-  file_name: string
-  file_type: string
-  file_content: string
-}
-
 export interface MediaUploadResponse {
   url: string
 }
@@ -25,118 +5,6 @@ export interface MediaUploadResponse {
 export interface ModelsResponse {
   llm_models: string[]
   rag_models: string[]
-}
-
-export interface RegularizeResponse {
-  file_content: string
-  change_applied: boolean
-  human_intervention: boolean
-}
-
-export interface StandardizeResponse {
-  file_content: string
-}
-
-export interface RecommenderHandoffResponse {
-  file_content: string
-  chosen_controller: string
-  trimming_params: string[]
-  states_inputs: string[]
-}
-
-export interface TrimmerArtifactsResponse {
-  result: Record<string, unknown>
-  config: Record<string, unknown>
-  pdf_file?: string
-  safe_system_name: string
-  output_dir: string
-  time_response_file?: string
-}
-
-export interface TrimmerTimeResponseResponse {
-  filename: string
-  message: string
-}
-
-export interface CaseStudiesResponse {
-  python: string[]
-  matlab: string[]
-  ga_json: string[]
-  mulo: string[]
-  mulo_objectives: Record<string, string>
-}
-
-export interface ArtifactResponse {
-  job_id: string
-  artifacts: Record<string, unknown>
-}
-
-export interface RagStatusResponse {
-  next_step: 'comparison' | 'review'
-  error_message: string
-}
-
-export interface MuloDesignerStateResponse {
-  job_id: string
-  controller_index: number
-  controller_designed: boolean
-  total_loops: number
-  loop_name: string
-  is_complete: boolean
-  equation: string
-  controller_structure: Record<string, unknown>[]
-  case_study: Record<string, unknown>
-  run_config: Record<string, unknown>
-  final_state: Record<string, unknown>
-  modified_code: string
-  modified_controller_structure: Record<string, unknown>[]
-  pid_gains: { Kp: number; Ki: number; Kd: number }
-  pid_gain_bounds: { Kp: number; Ki: number; Kd: number }
-}
-
-export interface MuloSimulateResponse {
-  signal_type: string
-  time: number[]
-  actual: number[]
-  reference: number[]
-  y_label: string
-  unit: string
-  code: string
-  amplitude?: number
-}
-
-export interface SiloSimTrace {
-  metrics: Record<string, number | boolean | null>
-  trajectory: number[]
-  control_signals: number[]
-  errors?: number[]
-}
-
-export interface SiloSimulateResponse {
-  controller_type: string
-  optimal_gains: Record<string, number>
-  manual_gains: Record<string, number>
-  param_bounds: Record<string, [number, number]>
-  target: number
-  dt: number
-  max_time: number
-  time: number[]
-  optimal: SiloSimTrace
-  manual: SiloSimTrace | null
-}
-
-export type PipelineType = 'siloDesign' | 'muloDesign' | null
-
-export interface StreamEvent {
-  type: string
-  mode?: string
-  content?: unknown
-  step?: string
-  job_id?: string
-  status?: string
-  error?: string
-  summary?: Record<string, unknown>
-  metadata?: Record<string, unknown>
 }
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -169,6 +37,8 @@ export interface UserProfileSurveyDetail {
   completed_at: string | null
 }
 
+export type FeedbackPipelineType = 'siloDesign' | 'muloDesign'
+
 export interface UserFeedbackSurveyDetail {
   pipeline_type: FeedbackPipelineType
   satisfaction: number
@@ -190,19 +60,6 @@ export interface AdminUserDetail {
   errors: ErrorEvent[]
 }
 
-export type ExperienceLevel = 'None' | 'Beginner' | 'Intermediate' | 'Advanced'
-export type DegreeLevel = "Bachelor's" | "Master's" | 'PhD' | 'Other'
-export type FeedbackPipelineType = 'siloDesign' | 'muloDesign'
-export type MajorField =
-  | 'Electrical Engineering'
-  | 'Mechanical Engineering'
-  | 'Chemical Engineering'
-  | 'Aerospace Engineering'
-  | 'Computer Science'
-  | 'Control Engineering'
-  | 'Mechatronics'
-  | 'Other'
-
 export interface SurveySettings {
   enabled: boolean
 }
@@ -213,35 +70,6 @@ export interface TutorialVideo {
   file_url: string
   sort_order: number
   created_at: string
-}
-
-export interface SurveyStatus {
-  enabled: boolean
-  needs_profile_survey: boolean
-  feedback_completed: boolean
-  feedback_completed_silo: boolean
-  feedback_completed_mulo: boolean
-  show_tutorial: boolean
-  videos: TutorialVideo[]
-}
-
-export interface ProfileSurveyRequest {
-  university: string
-  degree: DegreeLevel
-  major: MajorField
-  matlab_experience: ExperienceLevel
-  control_design_experience: ExperienceLevel
-}
-
-export interface FeedbackSurveyRequest {
-  pipeline_type: FeedbackPipelineType
-  satisfaction: number
-  ease_of_use: number
-  product_value: number
-  confidence: number
-  reuse_intention: number
-  willingness_to_pay: number
-  main_problems: string
 }
 
 export interface ProfileSurveyResponseRow {
@@ -412,12 +240,6 @@ export interface NavMenuItem {
   is_external: boolean
 }
 
-export interface LandingPayload {
-  brand: SiteBrand
-  menus: Record<string, NavMenuItem[]>
-  landing: Record<string, unknown>
-}
-
 export interface BlogPostListItem {
   id: number
   title: string
@@ -452,4 +274,3 @@ export interface BugReport {
 export interface BugReportSettings {
   enabled: boolean
 }
-

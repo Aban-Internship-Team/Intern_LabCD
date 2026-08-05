@@ -5,21 +5,23 @@ import { useAuth } from '../context/AuthContext'
 import { btnPrimary, btnWide, cardPanel, fieldInput, fieldLabel, pageIntro } from '../lib/classes'
 
 export function RegisterPage() {
-  const { user, loading, register } = useAuth()
+  const { user, loading, register, logout } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (!loading && user) {
-    return <Navigate to="/studio" replace />
+  if (!loading && user?.is_admin) {
+    return <Navigate to="/admin" replace />
   }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
+    setInfo(null)
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -32,8 +34,13 @@ export function RegisterPage() {
 
     setSubmitting(true)
     try {
-      await register(email.trim(), password)
-      navigate('/studio', { replace: true })
+      const created = await register(email.trim(), password)
+      if (!created.is_admin) {
+        logout()
+        setInfo('Account created. Ask an administrator to grant admin access, then sign in.')
+        return
+      }
+      navigate('/admin', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -49,11 +56,13 @@ export function RegisterPage() {
             Create account
           </h2>
           <p className={`${pageIntro} mt-2`}>
-            Register with your email. You receive the default plan set by an administrator.
+            Register with your email. An administrator must grant admin access before you can use
+            the panel.
           </p>
         </header>
 
         {error && <StatusMessage type="error" message={error} />}
+        {info && <StatusMessage type="success" message={info} />}
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-1">
           <label className={fieldLabel}>

@@ -1,19 +1,16 @@
-# LabCD
+# LabCD Admin Starter
 
-AI-assisted **control-system design** platform. Upload MATLAB (`.m`) or Python (`.py`) plant dynamics, regularize the code, then run either a **single-loop (SILO)** or **multi-loop (MULO)** design pipeline.
+Admin platform starter for LabCD (FastAPI + React + PostgreSQL). Interns develop new modules inside the **admin** section after signing in.
 
-**Current stack:** FastAPI + React + PostgreSQL (Docker Compose).  
-**Legacy stack:** Streamlit UI under `frontend_streamlit/` (still runnable; not the primary path).
+**Stack:** FastAPI + React + PostgreSQL (Docker Compose).
 
 ---
 
 ## Quick start (Docker)
 
-Requires Docker Desktop (or Docker Engine + Compose) and API keys for the LLM providers you use.
-
 ```bash
 cp .env.example .env
-# Edit .env — set at least one provider key and change JWT_SECRET / ADMIN_PASSWORD
+# Edit .env — change JWT_SECRET and ADMIN_PASSWORD
 
 docker compose up --build
 ```
@@ -25,6 +22,8 @@ docker compose up --build
 | Postgres  | localhost:5432 (from `.env`)|
 
 Default admin (from `.env`): `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+
+After login you land on `/admin`.
 
 Stop:
 
@@ -40,12 +39,10 @@ docker compose down
 
 ```bash
 cp .env.example .env
-# Fill API keys + JWT_SECRET
+# Set JWT_SECRET and ADMIN_PASSWORD
 ```
 
 ### 2. Database
-
-Start Postgres only (recommended):
 
 ```bash
 docker compose up db -d
@@ -83,7 +80,7 @@ npm run dev
 ```
 
 Dev server: http://localhost:5173  
-Vite proxies `/api` → `http://localhost:8000` (long timeouts for SSE design jobs).
+Vite proxies `/api` → `http://localhost:8000`.
 
 ---
 
@@ -91,142 +88,80 @@ Vite proxies `/api` → `http://localhost:8000` (long timeouts for SSE design jo
 
 ```
 LabCD-Phase-1-31/
-├── backend_api/           # ★ Primary backend (FastAPI + pipeline code used by API)
-│   ├── http/              # HTTP layer only — thin routers, schemas, services
-│   │   ├── routers/       # Route handlers (no heavy business logic)
-│   │   ├── schemas/       # Pydantic request/response models
-│   │   ├── services/      # Orchestration: jobs, auth, projects, calls into pipelines
-│   │   ├── config.py      # Env-based settings
-│   │   └── main.py        # FastAPI app entry
+├── backend_api/           # FastAPI backend
+│   ├── http/              # Routers, schemas, services
+│   │   ├── routers/       # Thin route handlers
+│   │   ├── schemas/       # Pydantic models
+│   │   ├── services/      # Auth, admin, CMS, monitoring
+│   │   ├── config.py
+│   │   └── main.py
 │   ├── db/                # SQLAlchemy models + session
-│   ├── Regularizer/       # MATLAB→Python, syntax fix, standardize
-│   ├── Recommender/       # Multi-loop architecture recommendation (LangGraph)
-│   ├── Trimmer/           # Equilibrium / trim + HITL
-│   ├── SiloDesigner/      # Single-loop controller design
-│   ├── MuloDesigner/      # Multi-loop cascade + GA
-│   └── common/            # Shared helpers (e.g. serialization)
-├── backend_core/          # Original pipeline modules (Streamlit-era reference)
-├── frontend/              # ★ React + Vite + Tailwind UI
+│   └── common/            # Shared helpers
+├── frontend/              # React + Vite + Tailwind
 │   └── src/
-│       ├── api/           # HTTP client, endpoints, types, SSE
-│       ├── pages/         # Route screens
-│       ├── components/    # Presentational UI
-│       ├── context/       # Auth, theme, pipeline session state
-│       ├── hooks/         # Job streaming / polling
-│       └── lib/           # Pure helpers / parsers (no server calls for business rules)
-├── frontend_streamlit/    # Legacy Streamlit UI
-├── case_studies/          # Reference plant models (m/ + py/)
-├── Test/                  # Pytest (mainly Regularizer)
-├── assets/                # Static assets (logo)
-├── uploads/               # Runtime uploads (gitignored; .gitkeep only)
-├── results/               # Runtime artifacts (gitignored; .gitkeep only)
-├── docker-compose.yml     # db + api + frontend
-├── Dockerfile.api         # FastAPI image
-├── Dockerfile             # Legacy Streamlit image
-├── requirements.txt       # Python dependencies
-├── .env.example           # Template for secrets / ports
-└── AGENTS.md              # Coding rules for contributors / agents
+│       ├── api/           # HTTP client, endpoints, types
+│       ├── pages/         # Login, register, Admin* pages
+│       ├── components/    # Shared UI + admin layout
+│       ├── context/       # Auth, theme
+│       └── hooks/
+├── docker-compose.yml
+├── Dockerfile.api
+├── requirements.txt
+├── .env.example
+└── AGENTS.md
 ```
+
+---
+
+## Adding an admin module
+
+Use existing modules (Users, Plans, Blog, Survey, …) as examples.
+
+1. **Backend schema** — add Pydantic models in `backend_api/http/schemas/`.
+2. **Backend service** — put business logic in `backend_api/http/services/<name>_service.py`.
+3. **Backend router** — thin handlers in `backend_api/http/routers/<name>.py` using `Depends(require_admin)`.
+4. **Register router** — `app.include_router(...)` in [`backend_api/http/main.py`](backend_api/http/main.py).
+5. **Frontend API** — add helpers in `frontend/src/api/endpoints.ts` (+ types in `types.ts`).
+6. **Frontend page** — create `frontend/src/pages/AdminYourModulePage.tsx`.
+7. **Route** — add a child route under `/admin` in [`frontend/src/App.tsx`](frontend/src/App.tsx).
+8. **Sidebar** — add an entry to `navItems` in [`frontend/src/components/admin/AdminLayout.tsx`](frontend/src/components/admin/AdminLayout.tsx).
+
+Keep business logic on the server. React should only render and call the API.
 
 ---
 
 ## Where business logic lives
 
-**Rule:** never put design/optimization/LLM orchestration logic in React. The UI calls the API; the API owns behavior.
-
-| Concern | Location | Notes |
-|---------|----------|--------|
-| HTTP routes | `backend_api/http/routers/` | Validate input, call a service, return schema |
-| Request/response shapes | `backend_api/http/schemas/` | Pydantic models |
-| Job orchestration, auth, projects | `backend_api/http/services/` | Starts workers, HITL resume, DB updates |
-| Persistence | `backend_api/db/` | Users, projects, permissions |
-| Regularize / recommend / trim / SILO / MULO | `backend_api/{Regularizer,Recommender,Trimmer,SiloDesigner,MuloDesigner}/` | Core algorithms, LangGraph graphs, GA, simulation |
-| Shared serialization | `backend_api/common/` | Cross-module helpers |
-| UI only | `frontend/src/` | Rendering, forms, streaming display |
-| Legacy reference | `backend_core/`, `frontend_streamlit/` | Prefer `backend_api` + `frontend` for new work |
-
-### Pipelines
-
-**Shared preprocess**
-
-```
-Upload → Regularizer (syntax / MATLAB→Python / standardize)
-```
-
-**SILO (single loop)**
-
-```
-Regularizer → SiloDesigner
-```
-
-**MULO (multi loop)**
-
-```
-Regularizer → Recommender → Trimmer → MuloDesigner (GA)
-```
-
-Frontend routes map roughly to stages: `/` (upload + pipeline choice), `/recommender`, `/trimmer`, `/silo`, `/mulo`, plus `/projects`, `/profile`, and `/admin/*`.
+| Concern | Location |
+|---------|----------|
+| HTTP routes | `backend_api/http/routers/` |
+| Request/response shapes | `backend_api/http/schemas/` |
+| Auth, admin CRUD, CMS, monitoring | `backend_api/http/services/` |
+| Persistence | `backend_api/db/` |
+| UI only | `frontend/src/` |
 
 ---
 
-## Development guide
-
-### Adding or changing an API feature
-
-1. Put domain logic in the relevant `backend_api/<Module>/` package (or extend an existing service).
-2. Expose it from `backend_api/http/services/<name>_service.py`.
-3. Add/adjust Pydantic models in `schemas/`.
-4. Wire a thin handler in `routers/` and register it in `http/main.py` if new.
-5. Update `frontend/src/api/endpoints.ts` + `types.ts`, then the page/component.
-
-### Frontend conventions
-
-- Use `frontend/src/api/` for all network I/O.
-- Keep pages/components free of design math, LLM prompts, and GA config defaults that belong on the server.
-- Long-running jobs use SSE (`hooks/useJobStream.ts` + API job endpoints).
-
-### Environment variables
+## Environment variables
 
 See `.env.example`. Important ones:
 
 | Variable | Purpose |
 |----------|---------|
-| `*_API_KEY` | LLM / search providers |
 | `DATABASE_URL` | Postgres connection |
 | `JWT_SECRET` | Auth signing key |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Seeded admin account |
 | `CORS_ORIGINS` | Allowed frontend origins |
-| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | SQLAlchemy pool (defaults 10 / 20) |
-| `API_THREAD_LIMIT` | Sync route threadpool size (default 64) |
-| `RESULTS_DIR` / `UPLOADS_DIR` | Artifact paths |
+| `RESULTS_DIR` / `UPLOADS_DIR` | Artifact / upload paths |
 | `VITE_API_BASE_URL` | Frontend API base (`frontend/.env`) |
 
-Never commit `.env` (ignored). Commit only `.env.example`.
-
-### Tests
-
-```bash
-# from repo root, with venv active
-pytest Test/
-```
-
-### Coding rules
-
-See [AGENTS.md](./AGENTS.md): keep functions small, avoid duplication, use env vars, preserve original pipeline behavior when migrating.
+Never commit `.env`. Commit only `.env.example`.
 
 ---
 
-## Legacy Streamlit
+## Coding rules
 
-```bash
-# with venv + deps installed
-streamlit run frontend_streamlit/home_page.py
-
-# or Docker (legacy single-container image)
-docker build -t labcd-streamlit -f Dockerfile .
-docker run --env-file .env -p 8501:8501 labcd-streamlit
-```
-
-The GitHub Action under `.github/workflows/deploy.yml` still targets this Streamlit image. Prefer `docker compose` for the FastAPI + React stack until that workflow is updated.
+See [AGENTS.md](./AGENTS.md): keep functions small, avoid duplication, use env vars, never put business logic in React.
 
 ---
 
@@ -234,7 +169,6 @@ The GitHub Action under `.github/workflows/deploy.yml` still targets this Stream
 
 - [ ] No secrets in the diff (`.env`, keys, passwords)
 - [ ] No user uploads / results / avatars committed
-- [ ] New runtime dirs use `.gitkeep` if needed
 - [ ] API changes reflected in OpenAPI (`/docs`) and frontend types
 - [ ] Business logic stays in `backend_api`, not React
 

@@ -79,7 +79,7 @@ export function AdminBugReportsPage() {
   const pagination = useClientPagination(reports, { resetKey: statusFilter })
 
   if (!currentUser?.is_admin) {
-    return <Navigate to="/studio" replace />
+    return <Navigate to="/login" replace />
   }
 
   const selected = reports.find((r) => r.id === selectedId) ?? null

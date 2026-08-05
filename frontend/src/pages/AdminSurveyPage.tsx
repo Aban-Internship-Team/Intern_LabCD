@@ -78,7 +78,7 @@ export function AdminSurveyPage() {
   const feedbackPagination = useClientPagination(feedbackRows)
 
   if (!currentUser?.is_admin) {
-    return <Navigate to="/studio" replace />
+    return <Navigate to="/login" replace />
   }
 
   const toggleEnabled = async (enabled: boolean) => {

@@ -19,79 +19,24 @@ from backend_api.http.config import (
     JWT_SECRET,
 )
 
-# Pipeline modes + module actions available in the system.
+# Seed actions for plan entitlements. Interns can add module actions here.
 DEFAULT_ACTIONS: list[tuple[str, str]] = [
-    ("pipeline:silo", "Run Single Loop (Silo) design for yourself"),
-    ("pipeline:mulo", "Run Multi Loop (Mulo) design for yourself"),
-    ("module:upload", "Upload dynamics files"),
-    ("module:regularize", "Run Regularizer / standardize"),
-    ("module:recommender", "Run Recommender"),
-    ("module:trimmer", "Run Trimmer"),
-    ("module:silo", "Run SiloDesigner jobs"),
-    ("module:mulo", "Run MuloDesigner jobs"),
-    ("module:case_studies", "Load and use case studies"),
+    ("module:admin", "Access admin features (example action)"),
 ]
 
-PIPELINE_ACTIONS = {
-    "siloDesign": "pipeline:silo",
-    "muloDesign": "pipeline:mulo",
+PIPELINE_ACTIONS: dict[str, str] = {}
+
+MODULE_ACTIONS: dict[str, str] = {
+    "admin": "module:admin",
 }
-
-MODULE_ACTIONS = {
-    "upload": "module:upload",
-    "regularize": "module:regularize",
-    "recommender": "module:recommender",
-    "trimmer": "module:trimmer",
-    "silo": "module:silo",
-    "mulo": "module:mulo",
-    "case_studies": "module:case_studies",
-}
-
-SILO_ACTION_CODES = [
-    "pipeline:silo",
-    "module:upload",
-    "module:regularize",
-    "module:silo",
-]
-
-MULO_ACTION_CODES = [
-    "pipeline:mulo",
-    "module:upload",
-    "module:regularize",
-    "module:recommender",
-    "module:trimmer",
-    "module:mulo",
-    "module:case_studies",
-]
 
 DEFAULT_PLANS: list[tuple[str, str, Decimal, list[str], list[str]]] = [
     (
         "Free",
-        "Default plan for new registrations (no modules).",
+        "Default plan for new registrations.",
         Decimal("0.00"),
         [],
-        ["gpt-4o-mini"],
-    ),
-    (
-        "Single Loop",
-        "Single Loop (Silo) pipeline access.",
-        Decimal("29.00"),
-        SILO_ACTION_CODES,
-        list(DEFAULT_LLM_MODELS),
-    ),
-    (
-        "Multi Loop",
-        "Multi Loop (Mulo) pipeline access.",
-        Decimal("49.00"),
-        MULO_ACTION_CODES,
-        list(DEFAULT_LLM_MODELS),
-    ),
-    (
-        "Full Access",
-        "Both Single Loop and Multi Loop pipelines.",
-        Decimal("79.00"),
-        sorted(set(SILO_ACTION_CODES + MULO_ACTION_CODES)),
-        list(DEFAULT_LLM_MODELS),
+        list(DEFAULT_LLM_MODELS)[:1] or ["gpt-4o-mini"],
     ),
 ]
 

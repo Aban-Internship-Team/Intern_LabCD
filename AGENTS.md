@@ -1,8 +1,8 @@
 # Project Rules
 
-This project is a migration from Streamlit to FastAPI + React.
+This project is an admin platform starter (FastAPI + React) for LabCD.
 
-See [README.md](./README.md) for how to run the stack and where business logic lives.
+See [README.md](./README.md) for how to run the stack and how to add admin modules.
 
 Goals
 
@@ -23,4 +23,3 @@ Rules
 - Use environment variables.
 - Keep files small.
 - Explain every major change.
-- Preserve original behavior.

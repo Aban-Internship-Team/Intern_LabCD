@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from backend_api.db.models import User
 from backend_api.db.session import get_db
 from backend_api.http.services.auth_service import decode_access_token, get_user_by_id
-from backend_api.http.services.job_store import Job
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -104,10 +103,3 @@ def assert_model_allowed(user: User, model: str | None) -> None:
         status_code=status.HTTP_403_FORBIDDEN,
         detail=f"Model not allowed for your plan: {normalized}",
     )
-
-
-def assert_job_access(job: Job, user: User) -> None:
-    if user.is_admin:
-        return
-    if job.user_id is None or job.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Job access denied")

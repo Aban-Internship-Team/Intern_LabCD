@@ -1,45 +1,27 @@
-import { apiFetch, artifactUrl, AUTH_TIMEOUT_MS, getAuthToken, projectArtifactUrl } from './client'
+import { apiFetch, AUTH_TIMEOUT_MS, getAuthToken, projectArtifactUrl } from './client'
 import type {
   ActionInfo,
-  ArtifactResponse,
   AdminUserDetail,
   AuthUser,
-  CaseStudiesResponse,
-  DefaultPlanInfo,
-  ErrorEvent,
-  ErrorTrackingSettings,
-  FeedbackSurveyRequest,
-  FeedbackSurveyResponseRow,
-  JobResponse,
-  JobStatusResponse,
-  ModelsResponse,
-  MonitoringResponse,
-  MuloDesignerStateResponse,
-  MuloSimulateResponse,
-  PlanInfo,
-  ProfileSurveyRequest,
-  ProjectDetail,
-  ProjectSummary,
-  RagStatusResponse,
-  RecommenderHandoffResponse,
-  RegularizeResponse,
-  SiloSimulateResponse,
-  StandardizeResponse,
-  SurveyResponses,
-  SurveySettings,
-  SurveyStatus,
-  TokenResponse,
-  TrimmerArtifactsResponse,
-  TutorialVideo,
-  UploadResponse,
-  MediaUploadResponse,
-  SiteBrand,
-  NavMenuItem,
-  LandingPayload,
   BlogPost,
   BlogPostListItem,
   BugReport,
   BugReportSettings,
+  DefaultPlanInfo,
+  ErrorEvent,
+  ErrorTrackingSettings,
+  MediaUploadResponse,
+  ModelsResponse,
+  MonitoringResponse,
+  NavMenuItem,
+  PlanInfo,
+  ProjectDetail,
+  ProjectSummary,
+  SiteBrand,
+  SurveyResponses,
+  SurveySettings,
+  TokenResponse,
+  TutorialVideo,
 } from './types'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
@@ -294,82 +276,9 @@ export const adminApi = {
     apiFetch<void>(`/admin/tutorial-videos/${videoId}`, { method: 'DELETE' }),
 }
 
-export const surveyApi = {
-  status: () => apiFetch<SurveyStatus>('/survey/status', {}, AUTH_TIMEOUT_MS),
-  submitProfile: (body: ProfileSurveyRequest) =>
-    apiFetch<AuthUser>('/survey/profile', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  submitFeedback: (body: FeedbackSurveyRequest) =>
-    apiFetch<FeedbackSurveyResponseRow>('/survey/feedback', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  dismissTutorial: (action: 'remind_later' | 'dont_show_again') =>
-    apiFetch<SurveyStatus>('/survey/tutorial/dismiss', {
-      method: 'POST',
-      body: JSON.stringify({ action }),
-    }),
-}
-
-export const projectsApi = {
-  list: () => apiFetch<ProjectSummary[]>('/projects'),
-  get: (projectId: number) => apiFetch<ProjectDetail>(`/projects/${projectId}`),
-  create: (body: {
-    title?: string
-    pipeline_type: 'siloDesign' | 'muloDesign'
-    file_name?: string
-    file_type?: string
-    file_content?: string
-    llm_model?: string
-    control_objective?: string
-  }) =>
-    apiFetch<ProjectDetail>('/projects', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  update: (
-    projectId: number,
-    body: {
-      title?: string
-      status?: string
-      control_objective?: string
-      file_name?: string
-      file_type?: string
-      file_content?: string
-      job_id?: string
-      results?: Record<string, unknown>
-    },
-  ) =>
-    apiFetch<ProjectDetail>(`/projects/${projectId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-  downloadArtifact: (projectId: number, filename: string) =>
-    projectArtifactUrl(projectId, filename, 'user'),
-
-  simulateSilo: (
-    projectId: number,
-    body: { gains: Record<string, number>; scenario?: Record<string, unknown> },
-  ) =>
-    apiFetch<SiloSimulateResponse>(`/projects/${projectId}/silo/simulate`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-}
-
 export const healthApi = {
   check: () => apiFetch<{ status: string }>('/health'),
   models: () => apiFetch<ModelsResponse>('/models'),
-}
-
-export const uploadApi = {
-  upload: (file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    return apiFetch<UploadResponse>('/upload', { method: 'POST', body: form })
-  },
 }
 
 export const bugReportsApi = {
@@ -401,228 +310,6 @@ export const bugReportsApi = {
     downloadAdminCsv('/admin/bug-reports/export.csv', {
       status: params?.status,
     }),
-}
-
-export const regularizerApi = {
-  regularize: (body: {
-    file_content: string
-    file_name?: string
-    file_type?: string
-    model?: string
-  }) =>
-    apiFetch<RegularizeResponse>('/regularize', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  standardize: (body: {
-    file_content: string
-    model?: string
-    silo_pipeline?: boolean
-  }) =>
-    apiFetch<StandardizeResponse>('/regularize/standardize', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-}
-
-export const recommenderApi = {
-  start: (body: {
-    file_content: string
-    file_name: string
-    model?: string
-    step?: string
-    user_prompt?: string
-  }) =>
-    apiFetch<JobResponse>('/recommender/start', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  state: (jobId: string) =>
-    apiFetch<Record<string, unknown>>(`/recommender/${jobId}/state`),
-
-  ragDecision: (jobId: string, body: { flags: string[]; model?: string }) =>
-    apiFetch<JobResponse>(`/recommender/${jobId}/rag-decision`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  ragStatus: (jobId: string) =>
-    apiFetch<RagStatusResponse>(`/recommender/${jobId}/rag-status`),
-
-  handoff: (jobId: string, body: { chosen_controller?: string | null }) =>
-    apiFetch<RecommenderHandoffResponse>(`/recommender/${jobId}/handoff`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-}
-
-export const trimmerApi = {
-  start: (body: {
-    file_content: string
-    file_name: string
-    model?: string
-    trimming_params?: Record<string, unknown>
-    states_inputs?: string[]
-    project_id?: number | null
-    recommender_job_id?: string | null
-  }) =>
-    apiFetch<JobResponse>('/trimmer/start', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  input: (jobId: string, body: { key: string; prompt: string; answer: string }) =>
-    apiFetch<JobResponse>(`/trimmer/${jobId}/input`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  artifacts: (jobId: string) =>
-    apiFetch<TrimmerArtifactsResponse>(`/trimmer/${jobId}/artifacts`),
-
-  timeResponse: (jobId: string) =>
-    apiFetch<{ filename: string; message: string }>(`/trimmer/${jobId}/time-response`, {
-      method: 'POST',
-    }),
-
-  generatePdf: (jobId: string, body?: { recommender_job_id?: string | null }) =>
-    apiFetch<{ filename: string; message: string }>(`/trimmer/${jobId}/pdf`, {
-      method: 'POST',
-      body: JSON.stringify(body ?? {}),
-    }),
-}
-
-export const siloApi = {
-  start: (body: {
-    config: Record<string, unknown>
-    control_objective?: string
-    project_id?: number | null
-  }) =>
-    apiFetch<JobResponse>('/silo/start', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  monitor: (jobId: string) =>
-    apiFetch<Record<string, unknown>>(`/silo/${jobId}/monitor`),
-
-  simulate: (
-    jobId: string,
-    body: { gains: Record<string, number>; scenario?: Record<string, unknown> },
-  ) =>
-    apiFetch<SiloSimulateResponse>(`/silo/${jobId}/simulate`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-}
-
-export const muloApi = {
-  init: (body: {
-    run_config: Record<string, unknown>
-    controller_structure: Record<string, unknown>[]
-    system_identification: Record<string, unknown>
-    trimming_result: Record<string, unknown>
-    equation: string
-    project_id?: number | null
-    file_name?: string
-    file_type?: string
-  }) =>
-    apiFetch<JobResponse>('/mulo/init', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  start: (body: {
-    run_config: Record<string, unknown>
-    controller_structure: Record<string, unknown>[]
-    system_identification: Record<string, unknown>
-    trimming_result: Record<string, unknown>
-    equation: string
-    project_id?: number | null
-    file_name?: string
-    file_type?: string
-  }) =>
-    apiFetch<JobResponse>('/mulo/start', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  configure: (
-    jobId: string,
-    body: { case_study: Record<string, unknown>; controller_structure: Record<string, unknown>[] },
-  ) =>
-    apiFetch<JobResponse>(`/mulo/${jobId}/configure`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  run: (jobId: string) =>
-    apiFetch<JobResponse>(`/mulo/${jobId}/run`, {
-      method: 'POST',
-    }),
-
-  continue: (
-    jobId: string,
-    body: { equation: string; controller_structure: Record<string, unknown>[] },
-  ) =>
-    apiFetch<JobResponse>(`/mulo/${jobId}/continue`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  state: (jobId: string) => apiFetch<MuloDesignerStateResponse>(`/mulo/${jobId}/state`),
-
-  simulate: (
-    jobId: string,
-    body: {
-      kp: number
-      ki: number
-      kd: number
-      signal_type: string
-      amplitude?: number
-    },
-  ) =>
-    apiFetch<MuloSimulateResponse>(`/mulo/${jobId}/simulate`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  scratchpad: (
-    jobId: string,
-    body: { modified_code: string; modified_controller_structure: Record<string, unknown>[] },
-  ) =>
-    apiFetch<JobResponse>(`/mulo/${jobId}/scratchpad`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  plotData: (jobId: string) =>
-    apiFetch<Record<string, unknown>>(`/mulo/${jobId}/plot-data`),
-}
-
-export const jobsApi = {
-  status: (jobId: string) => apiFetch<JobStatusResponse>(`/jobs/${jobId}`),
-  cancel: (jobId: string) =>
-    apiFetch<JobStatusResponse>(`/jobs/${jobId}/cancel`, { method: 'POST' }),
-  results: (jobId: string) => apiFetch<ArtifactResponse>(`/jobs/${jobId}/results`),
-  downloadArtifact: artifactUrl,
-}
-
-export const caseStudiesApi = {
-  list: () => apiFetch<CaseStudiesResponse>('/case-studies'),
-  mulo: (name: string) =>
-    apiFetch<Record<string, unknown>>(`/case-studies/mulo/${encodeURIComponent(name)}`),
-}
-
-export const siteApi = {
-  getLanding: () => apiFetch<LandingPayload>('/site/landing'),
-}
-
-export const blogApi = {
-  list: () => apiFetch<BlogPostListItem[]>('/blog'),
-  get: (slug: string) => apiFetch<BlogPost>(`/blog/${encodeURIComponent(slug)}`),
 }
 
 export const adminSiteApi = {

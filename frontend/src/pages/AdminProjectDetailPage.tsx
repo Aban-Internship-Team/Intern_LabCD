@@ -4,7 +4,6 @@ import { ArrowLeft, Download, Trash2 } from 'lucide-react'
 import { adminApi } from '../api/endpoints'
 import type { ProjectDetail } from '../api/types'
 import { CodePreview } from '../components/CodePreview'
-import { ProjectResultsView } from '../components/ProjectResultsView'
 import { StatusMessage } from '../components/StatusMessage'
 import { btnBase, btnCompact, btnPrimary, cardPanel } from '../lib/classes'
 import { pipelineLabel, statusBadgeClass } from '../lib/projectLabels'
@@ -65,6 +64,9 @@ export function AdminProjectDetailPage() {
   }
 
   const downloadName = project.file_name || `project-${project.id}.py`
+  const resultsJson = project.results
+    ? JSON.stringify(project.results, null, 2)
+    : null
 
   return (
     <div className="admin-fade-in space-y-6">
@@ -118,13 +120,13 @@ export function AdminProjectDetailPage() {
 
       <div className={cardPanel}>
         <h2 className="m-0 mb-2 text-lg font-semibold text-foreground">Results</h2>
-        <ProjectResultsView
-          pipelineType={project.pipeline_type}
-          results={project.results}
-          projectId={project.id}
-          jobId={project.job_id}
-          artifactScope="admin"
-        />
+        {resultsJson ? (
+          <pre className="m-0 max-h-[480px] overflow-auto rounded-lg bg-surface-muted p-4 text-xs text-foreground">
+            {resultsJson}
+          </pre>
+        ) : (
+          <p className="m-0 text-sm text-muted-text">No results stored for this project.</p>
+        )}
       </div>
     </div>
   )

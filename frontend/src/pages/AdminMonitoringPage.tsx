@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import type { Data } from 'plotly.js'
 import {
   Activity,
   Cpu,
@@ -13,7 +12,6 @@ import {
 import { adminApi } from '../api/endpoints'
 import type { MonitoringResponse, MonitoringSnapshot } from '../api/types'
 import { AdminDownloadCsvButton } from '../components/admin/AdminDownloadCsvButton'
-import { PlotlyChart } from '../components/PlotlyChart'
 import { StatusMessage } from '../components/StatusMessage'
 import { downloadCsv } from '../lib/downloadCsv'
 import { btnBase, btnCompact, cardPanel } from '../lib/classes'
@@ -72,30 +70,48 @@ function UsageBar({ percent }: { percent: number }) {
   )
 }
 
-function sparklineData(
-  history: MonitoringSnapshot[],
-  pick: (s: MonitoringSnapshot) => number,
-  name: string,
-): Data[] {
-  return [
-    {
-      type: 'scatter',
-      mode: 'lines',
-      name,
-      x: history.map((s) => s.collected_at),
-      y: history.map(pick),
-      line: { width: 2, shape: 'spline' },
-      fill: 'tozeroy',
-      fillcolor: 'rgba(37, 99, 235, 0.08)',
-      hovertemplate: '%{y:.2f}<extra></extra>',
-    },
-  ]
-}
+function Sparkline({
+  history,
+  pick,
+  unit,
+}: {
+  history: MonitoringSnapshot[]
+  pick: (s: MonitoringSnapshot) => number
+  unit: string
+}) {
+  const values = history.map(pick)
+  const max = Math.max(...values, 1)
+  const min = Math.min(...values, 0)
+  const range = Math.max(max - min, 1)
+  const width = 320
+  const height = 120
+  const pad = 8
+  const points = values
+    .map((v, i) => {
+      const x = pad + (i / Math.max(values.length - 1, 1)) * (width - pad * 2)
+      const y = height - pad - ((v - min) / range) * (height - pad * 2)
+      return `${x},${y}`
+    })
+    .join(' ')
+  const latest = values[values.length - 1]
 
-const sparkLayout = {
-  margin: { l: 36, r: 8, t: 8, b: 28 },
-  showlegend: false,
-  xaxis: { showticklabels: false, showgrid: false, zeroline: false },
+  return (
+    <div>
+      <div className="mb-2 text-sm text-muted-text">
+        Latest: <span className="font-medium text-foreground">{latest.toFixed(2)} {unit}</span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[140px] w-full text-primary" role="img">
+        <polyline
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          points={points}
+        />
+      </svg>
+    </div>
+  )
 }
 
 export function AdminMonitoringPage() {
@@ -219,9 +235,7 @@ export function AdminMonitoringPage() {
         <MetricCard
           label="Network"
           value={
-            loading || !current
-              ? '—'
-              : `↓ ${formatRate(current.network.recv_rate_bps)}`
+            loading || !current ? '—' : `↓ ${formatRate(current.network.recv_rate_bps)}`
           }
           hint={
             current
@@ -254,48 +268,16 @@ export function AdminMonitoringPage() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <ChartCard title="CPU history" empty={history.length < 2}>
-          <PlotlyChart
-            data={sparklineData(history, (s) => s.cpu_percent, 'CPU %')}
-            layout={{
-              ...sparkLayout,
-              yaxis: { title: { text: '%' }, rangemode: 'tozero' },
-            }}
-            height={200}
-            revision={history.length}
-          />
+          <Sparkline history={history} pick={(s) => s.cpu_percent} unit="%" />
         </ChartCard>
         <ChartCard title="RAM history" empty={history.length < 2}>
-          <PlotlyChart
-            data={sparklineData(history, (s) => s.memory.percent, 'RAM %')}
-            layout={{
-              ...sparkLayout,
-              yaxis: { title: { text: '%' }, rangemode: 'tozero' },
-            }}
-            height={200}
-            revision={history.length}
-          />
+          <Sparkline history={history} pick={(s) => s.memory.percent} unit="%" />
         </ChartCard>
         <ChartCard title="API latency history" empty={history.length < 2}>
-          <PlotlyChart
-            data={sparklineData(history, (s) => s.api.avg_latency_ms, 'Latency ms')}
-            layout={{
-              ...sparkLayout,
-              yaxis: { title: { text: 'ms' }, rangemode: 'tozero' },
-            }}
-            height={200}
-            revision={history.length}
-          />
+          <Sparkline history={history} pick={(s) => s.api.avg_latency_ms} unit="ms" />
         </ChartCard>
         <ChartCard title="Error rate history" empty={history.length < 2}>
-          <PlotlyChart
-            data={sparklineData(history, (s) => s.api.error_rate_percent, 'Errors %')}
-            layout={{
-              ...sparkLayout,
-              yaxis: { title: { text: '%' }, rangemode: 'tozero' },
-            }}
-            height={200}
-            revision={history.length}
-          />
+          <Sparkline history={history} pick={(s) => s.api.error_rate_percent} unit="%" />
         </ChartCard>
       </section>
     </div>

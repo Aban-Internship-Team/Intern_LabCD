@@ -16,20 +16,14 @@ interface AuthContextValue {
   token: string | null
   loading: boolean
   sessionError: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<AuthUser>
+  register: (email: string, password: string) => Promise<AuthUser>
   logout: () => void
   hasAction: (code: string) => boolean
-  canUsePipeline: (pipeline: 'siloDesign' | 'muloDesign') => boolean
   refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
-
-const PIPELINE_ACTION: Record<'siloDesign' | 'muloDesign', string> = {
-  siloDesign: 'pipeline:silo',
-  muloDesign: 'pipeline:mulo',
-}
 
 function isUnauthorized(err: unknown): boolean {
   return err instanceof ApiError && err.status === 401
@@ -91,13 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshUser()
   }, [refreshUser])
 
-  const applyToken = useCallback(async (accessToken: string) => {
+  const applyToken = useCallback(async (accessToken: string): Promise<AuthUser> => {
     setAuthToken(accessToken)
     setToken(accessToken)
     try {
       const me = await authApi.me()
       setUser(me)
       setSessionError(false)
+      return me
     } catch (err) {
       clearAuthToken()
       setToken(null)
@@ -109,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const result = await authApi.login({ email, password })
-      await applyToken(result.access_token)
+      return applyToken(result.access_token)
     },
     [applyToken],
   )
@@ -117,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (email: string, password: string) => {
       const result = await authApi.register({ email, password })
-      await applyToken(result.access_token)
+      return applyToken(result.access_token)
     },
     [applyToken],
   )
@@ -138,11 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   )
 
-  const canUsePipeline = useCallback(
-    (pipeline: 'siloDesign' | 'muloDesign') => hasAction(PIPELINE_ACTION[pipeline]),
-    [hasAction],
-  )
-
   const value = useMemo(
     () => ({
       user,
@@ -153,7 +143,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       hasAction,
-      canUsePipeline,
       refreshUser,
     }),
     [
@@ -165,7 +154,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       hasAction,
-      canUsePipeline,
       refreshUser,
     ],
   )
