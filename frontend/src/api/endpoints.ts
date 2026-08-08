@@ -33,6 +33,15 @@ import type {
   SiteBrand,
   SurveyResponses,
   SurveySettings,
+  Ticket,
+  TicketCategory,
+  TicketCreate,
+  TicketListItem,
+  TicketMessage,
+  TicketMessageCreate,
+  TicketPriority,
+  TicketStatus,
+  TicketUpdate,
   TokenResponse,
   TutorialVideo,
 } from './types'
@@ -455,6 +464,53 @@ export const featureRequestsApi = {
     apiFetch<FeatureRequestComment[]>(`/feature-requests/${requestId}/comments`),
   addComment: (requestId: number, body: FeatureRequestCommentCreate) =>
     apiFetch<FeatureRequestComment>(`/feature-requests/${requestId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+}
+
+export const ticketsApi = {
+  create: (body: TicketCreate) =>
+    apiFetch<Ticket>('/tickets', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  list: (params?: {
+    status?: TicketStatus | 'all'
+    priority?: TicketPriority | 'all'
+    category?: TicketCategory | 'all'
+  }) =>
+    apiFetch<TicketListItem[]>(
+      `/tickets${buildQuery({
+        status: params?.status,
+        priority: params?.priority,
+        category: params?.category,
+      })}`,
+    ),
+  get: (ticketId: number) => apiFetch<Ticket>(`/tickets/${ticketId}`),
+  update: (ticketId: number, body: TicketUpdate) =>
+    apiFetch<Ticket>(`/tickets/${ticketId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  updateStatus: (ticketId: number, status: TicketStatus) =>
+    apiFetch<Ticket>(`/tickets/${ticketId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  assign: (ticketId: number, assignedTo: number | null) =>
+    apiFetch<Ticket>(`/tickets/${ticketId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ assigned_to: assignedTo }),
+    }),
+  close: (ticketId: number) =>
+    apiFetch<Ticket>(`/tickets/${ticketId}/close`, { method: 'PATCH' }),
+  remove: (ticketId: number) =>
+    apiFetch<void>(`/tickets/${ticketId}`, { method: 'DELETE' }),
+  getMessages: (ticketId: number) =>
+    apiFetch<TicketMessage[]>(`/tickets/${ticketId}/messages`),
+  addMessage: (ticketId: number, body: TicketMessageCreate) =>
+    apiFetch<TicketMessage>(`/tickets/${ticketId}/messages`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
