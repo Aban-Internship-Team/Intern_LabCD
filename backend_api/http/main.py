@@ -23,6 +23,7 @@ from backend_api.http.routers import (
     health,
     site,
     survey,
+    tickets,
 )
 from backend_api.http.services import error_tracking_service
 
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(chats.router, prefix=API_PREFIX)
     app.include_router(chats.ws_router)  # /ws/chats/{chat_id} (no API prefix)
     app.include_router(feature_requests.router, prefix=API_PREFIX)
+    app.include_router(tickets.router, prefix=API_PREFIX)
     app.include_router(errors.router, prefix=API_PREFIX)
     app.mount(f"{API_PREFIX}/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
     return app
