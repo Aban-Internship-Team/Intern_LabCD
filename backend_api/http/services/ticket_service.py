@@ -97,6 +97,10 @@ def create_ticket(
     return get_ticket(db, ticket.id)  # type: ignore[return-value]
 
 
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 200
+
+
 def list_tickets(
     db: Session,
     user: User,
@@ -104,7 +108,18 @@ def list_tickets(
     status: str | None = None,
     priority: str | None = None,
     category: str | None = None,
-) -> list[Ticket]:
+    page: int | None = None,
+    page_size: int | None = None,
+) -> tuple[list[Ticket], int]:
+    """List tickets visible to ``user``, optionally paginated.
+
+    When ``page``/``page_size`` are both omitted, every matching row is
+    returned (this preserves the previous, non-paginated behavior for
+    existing callers). Passing either one turns pagination on. The total
+    count of matching rows (ignoring page/page_size) is always returned
+    alongside the page of results so callers can render page controls or
+    a total badge without a second round trip.
+    """
     query = db.query(Ticket).options(
         joinedload(Ticket.user),
         joinedload(Ticket.assignee),
@@ -117,7 +132,16 @@ def list_tickets(
         query = query.filter(Ticket.priority == priority)
     if category and category != "all":
         query = query.filter(Ticket.category == category)
-    return query.order_by(Ticket.created_at.desc()).all()
+
+    total = query.order_by(None).count()
+
+    query = query.order_by(Ticket.created_at.desc())
+    if page is not None or page_size is not None:
+        safe_page = max(page or 1, 1)
+        safe_page_size = min(max(page_size or DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE)
+        query = query.offset((safe_page - 1) * safe_page_size).limit(safe_page_size)
+
+    return query.all(), total
 
 
 def get_ticket(db: Session, ticket_id: int) -> Ticket | None:

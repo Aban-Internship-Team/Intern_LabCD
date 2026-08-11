@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from backend_api.db.models import User
@@ -61,19 +61,28 @@ def create_ticket(
 
 @router.get("/tickets", response_model=list[TicketListItem])
 def list_tickets(
+    response: Response,
     ticket_status: str | None = Query(None, alias="status", pattern=STATUS_FILTER),
     priority: str | None = Query(None, pattern=PRIORITY_FILTER),
     category: str | None = Query(None, pattern=CATEGORY_FILTER),
+    page: int | None = Query(None, ge=1, description="1-indexed page number"),
+    page_size: int | None = Query(None, ge=1, le=200, description="Rows per page (max 200)"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[TicketListItem]:
-    rows = ticket_service.list_tickets(
+    # Pagination is opt-in: pass `page` and/or `page_size` to receive a
+    # page of results. Omit both to get every matching ticket, exactly as
+    # before this endpoint supported pagination.
+    rows, total = ticket_service.list_tickets(
         db,
         user,
         status=ticket_status,
         priority=priority,
         category=category,
+        page=page,
+        page_size=page_size,
     )
+    response.headers["X-Total-Count"] = str(total)
     return [TicketListItem.model_validate(ticket_service.to_list_item(row)) for row in rows]
 
 
