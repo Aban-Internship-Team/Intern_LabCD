@@ -7,9 +7,22 @@ import type {
   BlogPostListItem,
   BugReport,
   BugReportSettings,
+  ChatMessage,
+  ChatMessageCreate,
+  ChatSession,
+  ChatSessionCreate,
+  ChatSessionListItem,
   DefaultPlanInfo,
   ErrorEvent,
   ErrorTrackingSettings,
+  FeatureRequest,
+  FeatureRequestComment,
+  FeatureRequestCommentCreate,
+  FeatureRequestCreate,
+  FeatureRequestListItem,
+  FeatureRequestStatus,
+  FeatureRequestUpdate,
+  FeatureRequestVoteOut,
   MediaUploadResponse,
   ModelsResponse,
   MonitoringResponse,
@@ -382,4 +395,67 @@ export const adminBlogApi = {
     }),
   delete: (postId: number) =>
     apiFetch<void>(`/admin/blog/${postId}`, { method: 'DELETE' }),
+}
+
+export const chatsApi = {
+  create: (body?: ChatSessionCreate) =>
+    apiFetch<ChatSession>('/chats', {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
+  list: (params?: { status?: 'open' | 'active' | 'closed' | 'all' }) =>
+    apiFetch<ChatSessionListItem[]>(
+      `/chats${buildQuery({ status: params?.status })}`,
+    ),
+  get: (chatId: number) => apiFetch<ChatSession>(`/chats/${chatId}`),
+  join: (chatId: number) =>
+    apiFetch<ChatSession>(`/chats/${chatId}/join`, { method: 'POST' }),
+  close: (chatId: number) =>
+    apiFetch<ChatSession>(`/chats/${chatId}/close`, { method: 'PATCH' }),
+  listMessages: (chatId: number) =>
+    apiFetch<ChatMessage[]>(`/chats/${chatId}/messages`),
+  sendMessage: (chatId: number, body: ChatMessageCreate) =>
+    apiFetch<ChatMessage>(`/chats/${chatId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+}
+
+export const featureRequestsApi = {
+  create: (body: FeatureRequestCreate) =>
+    apiFetch<FeatureRequest>('/feature-requests', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  list: (params?: { status?: FeatureRequestStatus | 'all' }) =>
+    apiFetch<FeatureRequestListItem[]>(
+      `/feature-requests${buildQuery({ status: params?.status })}`,
+    ),
+  get: (requestId: number) =>
+    apiFetch<FeatureRequest>(`/feature-requests/${requestId}`),
+  update: (requestId: number, body: FeatureRequestUpdate) =>
+    apiFetch<FeatureRequest>(`/feature-requests/${requestId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  updateStatus: (requestId: number, status: FeatureRequestStatus) =>
+    apiFetch<FeatureRequest>(`/admin/feature-requests/${requestId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  remove: (requestId: number) =>
+    apiFetch<void>(`/feature-requests/${requestId}`, { method: 'DELETE' }),
+  vote: (requestId: number) =>
+    apiFetch<FeatureRequestVoteOut>(`/feature-requests/${requestId}/vote`, {
+      method: 'POST',
+    }),
+  unvote: (requestId: number) =>
+    apiFetch<void>(`/feature-requests/${requestId}/vote`, { method: 'DELETE' }),
+  listComments: (requestId: number) =>
+    apiFetch<FeatureRequestComment[]>(`/feature-requests/${requestId}/comments`),
+  addComment: (requestId: number, body: FeatureRequestCommentCreate) =>
+    apiFetch<FeatureRequestComment>(`/feature-requests/${requestId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 }

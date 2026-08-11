@@ -8,14 +8,17 @@ import {
   Flag,
   Globe,
   LayoutDashboard,
+  Lightbulb,
   LogOut,
   Menu,
+  MessageCircle,
   Newspaper,
   Package,
   Users,
   X,
 } from 'lucide-react'
 import { BugReportFab } from '../BugReportFab'
+import { LiveChatFab } from '../LiveChatFab'
 import { ThemeToggle } from '../ThemeToggle'
 import { useAuth } from '../../context/AuthContext'
 import { btnBase, btnCompact } from '../../lib/classes'
@@ -29,6 +32,8 @@ const navItems = [
   { to: '/admin/blog', end: false, label: 'Blog', icon: Newspaper },
   { to: '/admin/survey', end: false, label: 'Survey', icon: ClipboardList },
   { to: '/admin/bug-reports', end: false, label: 'Bug Reports', icon: Flag },
+  { to: '/admin/live-chat', end: false, label: 'Live Chat', icon: MessageCircle },
+  { to: '/admin/feature-requests', end: false, label: 'Feature Requests', icon: Lightbulb },
   { to: '/admin/monitoring', end: false, label: 'Monitoring', icon: Activity },
   { to: '/admin/errors', end: false, label: 'Error Tracking', icon: Bug },
 ] as const
@@ -93,7 +98,7 @@ export function AdminLayout() {
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 p-3">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
           {navItems.map(({ to, end, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -153,7 +158,11 @@ export function AdminLayout() {
           </div>
         </main>
       </div>
-      <BugReportFab />
+
+      <div className="fixed bottom-5 right-5 z-50 flex flex-col-reverse items-end gap-3">
+        <BugReportFab />
+        <LiveChatFab />
+      </div>
     </div>
   )
 }
