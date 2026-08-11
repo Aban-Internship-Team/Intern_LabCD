@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Newspaper,
   Package,
+  Ticket,
   Users,
   X,
 } from 'lucide-react'
@@ -33,6 +34,7 @@ const navItems = [
   { to: '/admin/survey', end: false, label: 'Survey', icon: ClipboardList },
   { to: '/admin/bug-reports', end: false, label: 'Bug Reports', icon: Flag },
   { to: '/admin/live-chat', end: false, label: 'Live Chat', icon: MessageCircle },
+  { to: '/admin/tickets', end: false, label: 'Tickets', icon: Ticket },
   { to: '/admin/feature-requests', end: false, label: 'Feature Requests', icon: Lightbulb },
   { to: '/admin/monitoring', end: false, label: 'Monitoring', icon: Activity },
   { to: '/admin/errors', end: false, label: 'Error Tracking', icon: Bug },

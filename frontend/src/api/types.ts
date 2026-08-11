@@ -387,3 +387,78 @@ export interface FeatureRequestVoteOut {
   created_at: string
   vote_count: number
 }
+
+// --- Support Tickets ---
+
+export type TicketStatus =
+  | 'open'
+  | 'in_progress'
+  | 'waiting_for_user'
+  | 'resolved'
+  | 'closed'
+
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export type TicketCategory = 'general' | 'billing' | 'technical' | 'account' | 'other'
+
+export interface TicketMessage {
+  id: number
+  ticket_id: number
+  sender_id: number
+  sender_email: string | null
+  message: string
+  created_at: string
+}
+
+export interface Ticket {
+  id: number
+  user_id: number
+  user_email: string | null
+  assigned_to: number | null
+  assignee_email: string | null
+  title: string
+  description: string
+  category: TicketCategory | string
+  priority: TicketPriority | string
+  status: TicketStatus | string
+  created_at: string
+  updated_at: string
+  closed_at: string | null
+  messages?: TicketMessage[]
+}
+
+export interface TicketListItem {
+  id: number
+  user_id: number
+  user_email: string | null
+  assigned_to: number | null
+  assignee_email: string | null
+  title: string
+  description: string
+  category: TicketCategory | string
+  priority: TicketPriority | string
+  status: TicketStatus | string
+  created_at: string
+  updated_at: string
+  closed_at: string | null
+}
+
+export interface TicketCreate {
+  title: string
+  description: string
+  category?: TicketCategory
+  priority?: TicketPriority
+}
+
+export interface TicketUpdate {
+  title?: string
+  description?: string
+  category?: TicketCategory
+  priority?: TicketPriority
+  status?: TicketStatus
+  assigned_to?: number | null
+}
+
+export interface TicketMessageCreate {
+  message: string
+}

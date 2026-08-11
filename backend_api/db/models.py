@@ -152,6 +152,18 @@ class User(Base):
         back_populates="user",
         lazy="noload",
     )
+    tickets: Mapped[list["Ticket"]] = relationship(
+        "Ticket",
+        back_populates="user",
+        foreign_keys="Ticket.user_id",
+        lazy="noload",
+    )
+    assigned_tickets: Mapped[list["Ticket"]] = relationship(
+        "Ticket",
+        back_populates="assignee",
+        foreign_keys="Ticket.assigned_to",
+        lazy="noload",
+    )
 
     def action_codes(self) -> list[str]:
         if self.plan is None:
@@ -579,3 +591,85 @@ class FeatureRequestComment(Base):
         back_populates="comments",
     )
     user: Mapped[User] = relationship("User")
+
+
+class Ticket(Base):
+    """Support ticket submitted by a user and optionally assigned to an admin."""
+
+    __tablename__ = "tickets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    assigned_to: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(40), default="general", nullable=False, index=True)
+    priority: Mapped[str] = mapped_column(String(40), default="medium", nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), default="open", nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship(
+        "User",
+        back_populates="tickets",
+        foreign_keys=[user_id],
+    )
+    assignee: Mapped[User | None] = relationship(
+        "User",
+        back_populates="assigned_tickets",
+        foreign_keys=[assigned_to],
+    )
+    messages: Mapped[list["TicketMessage"]] = relationship(
+        "TicketMessage",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        lazy="noload",
+        order_by="TicketMessage.created_at",
+    )
+
+
+class TicketMessage(Base):
+    """Reply/message on a support ticket."""
+
+    __tablename__ = "ticket_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticket_id: Mapped[int] = mapped_column(
+        ForeignKey("tickets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    sender_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    ticket: Mapped[Ticket] = relationship("Ticket", back_populates="messages")
+    sender: Mapped[User] = relationship("User")

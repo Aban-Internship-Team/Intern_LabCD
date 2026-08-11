@@ -17,6 +17,7 @@ import { AdminProjectDetailPage } from './pages/AdminProjectDetailPage'
 import { AdminProjectsPage } from './pages/AdminProjectsPage'
 import { AdminSitePage } from './pages/AdminSitePage'
 import { AdminSurveyPage } from './pages/AdminSurveyPage'
+import { AdminTicketsPage } from './pages/AdminTicketsPage'
 import { AdminUserDetailPage } from './pages/AdminUserDetailPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { LoginPage } from './pages/LoginPage'
@@ -44,6 +45,7 @@ export default function App() {
                 <Route path="bug-reports" element={<AdminBugReportsPage />} />
                 <Route path="live-chat" element={<AdminLiveChatPage />} />
                 <Route path="feature-requests" element={<AdminFeatureRequestsPage />} />
+                <Route path="tickets" element={<AdminTicketsPage />} />
                 <Route path="plans" element={<AdminPlansPage />} />
                 <Route path="users" element={<AdminUsersPage />} />
                 <Route path="users/:userId" element={<AdminUserDetailPage />} />
