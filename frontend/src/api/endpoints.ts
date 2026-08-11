@@ -1,4 +1,4 @@
-import { apiFetch, AUTH_TIMEOUT_MS, getAuthToken, projectArtifactUrl } from './client'
+import { apiFetch, apiFetchPage, AUTH_TIMEOUT_MS, getAuthToken, projectArtifactUrl } from './client'
 import type {
   ActionInfo,
   AdminUserDetail,
@@ -479,12 +479,36 @@ export const ticketsApi = {
     status?: TicketStatus | 'all'
     priority?: TicketPriority | 'all'
     category?: TicketCategory | 'all'
+    // Both optional — omit to get every matching ticket (previous
+    // behavior). The API also returns the total match count in the
+    // `X-Total-Count` response header for callers that add paging UI.
+    page?: number
+    pageSize?: number
   }) =>
     apiFetch<TicketListItem[]>(
       `/tickets${buildQuery({
         status: params?.status,
         priority: params?.priority,
         category: params?.category,
+        page: params?.page,
+        page_size: params?.pageSize,
+      })}`,
+    ),
+  /** Server-paginated ticket list: fetches one page and its total count. */
+  listPage: (params: {
+    status?: TicketStatus | 'all'
+    priority?: TicketPriority | 'all'
+    category?: TicketCategory | 'all'
+    page: number
+    pageSize: number
+  }) =>
+    apiFetchPage<TicketListItem[]>(
+      `/tickets${buildQuery({
+        status: params.status,
+        priority: params.priority,
+        category: params.category,
+        page: params.page,
+        page_size: params.pageSize,
       })}`,
     ),
   get: (ticketId: number) => apiFetch<Ticket>(`/tickets/${ticketId}`),

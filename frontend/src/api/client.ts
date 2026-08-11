@@ -61,11 +61,11 @@ function reportApiFailure(path: string, method: string, status: number, message:
   })
 }
 
-export async function apiFetch<T>(
+async function fetchValidated(
   path: string,
   options: RequestInit = {},
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
-): Promise<T> {
+): Promise<Response> {
   const token = getAuthToken()
   const method = (options.method ?? 'GET').toUpperCase()
   const controller = new AbortController()
@@ -106,11 +106,37 @@ export async function apiFetch<T>(
     throw new ApiError(response.status, message)
   }
 
+  return response
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
+  const response = await fetchValidated(path, options, timeoutMs)
   if (response.status === 204) {
     return undefined as T
   }
-
   return response.json() as T
+}
+
+/**
+ * Like `apiFetch`, but also surfaces the `X-Total-Count` response header —
+ * for paginated list endpoints (e.g. `GET /tickets?page=&page_size=`) that
+ * return a page of items plus the total match count out of band.
+ * Falls back to the page length when the header is missing.
+ */
+export async function apiFetchPage<T extends unknown[]>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<{ items: T; total: number }> {
+  const response = await fetchValidated(path, options, timeoutMs)
+  const items = (response.status === 204 ? [] : await response.json()) as T
+  const header = response.headers.get('X-Total-Count')
+  const total = header !== null ? Number(header) : items.length
+  return { items, total: Number.isFinite(total) ? total : items.length }
 }
 
 export function artifactUrl(jobId: string, filename: string): string {
