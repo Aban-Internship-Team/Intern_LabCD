@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { AdminBlogEditorPage } from './pages/AdminBlogEditorPage'
 import { AdminBlogPage } from './pages/AdminBlogPage'
 import { AdminBugReportsPage } from './pages/AdminBugReportsPage'
+import { AdminChatCenterPage } from './pages/AdminChatCenterPage'
 import { AdminFeatureRequestsPage } from './pages/AdminFeatureRequestsPage'
 import { AdminLiveChatPage } from './pages/AdminLiveChatPage'
 import { AdminOverviewPage } from './pages/AdminOverviewPage'
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="monitoring" element={<AdminMonitoringPage />} />
                 <Route path="errors" element={<AdminErrorsPage />} />
                 <Route path="bug-reports" element={<AdminBugReportsPage />} />
+                <Route path="chat-center" element={<AdminChatCenterPage />} />
                 <Route path="live-chat" element={<AdminLiveChatPage />} />
                 <Route path="feature-requests" element={<AdminFeatureRequestsPage />} />
                 <Route path="tickets" element={<AdminTicketsPage />} />

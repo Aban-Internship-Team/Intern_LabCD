@@ -298,6 +298,10 @@ export interface ChatSession {
   created_at: string
   closed_at: string | null
   messages?: ChatMessage[]
+  unread_count?: number
+  last_message_preview?: string | null
+  last_message_at?: string | null
+  peer_online?: boolean
 }
 
 export interface ChatSessionListItem {
@@ -309,6 +313,10 @@ export interface ChatSessionListItem {
   status: ChatSessionStatus | string
   created_at: string
   closed_at: string | null
+  unread_count?: number
+  last_message_preview?: string | null
+  last_message_at?: string | null
+  peer_online?: boolean
 }
 
 export interface ChatSessionCreate {
@@ -318,6 +326,40 @@ export interface ChatSessionCreate {
 export interface ChatMessageCreate {
   message: string
 }
+
+export interface ChatReadResult {
+  chat_id: number
+  unread_count: number
+}
+
+// --- Notifications (Chat Center contract) ---
+
+export type NotificationType = 'chat_message' | string
+
+export interface AppNotification {
+  id: number
+  type: NotificationType
+  title: string
+  body: string
+  chat_id: number | null
+  read: boolean
+  created_at: string
+}
+
+export interface NotificationUnreadCount {
+  count: number
+}
+
+export type NotificationSocketEvent =
+  | {
+      type: 'notification'
+      payload: AppNotification
+    }
+  | {
+      type: 'unread_summary'
+      chat_unread_total: number
+      notification_unread: number
+    }
 
 // --- Feature Requests ---
 
