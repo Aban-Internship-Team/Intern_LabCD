@@ -3,6 +3,7 @@ import { UserThemeSync } from './components/UserThemeSync'
 import { AdminLayout } from './components/admin/AdminLayout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
+import { NotificationProvider } from './context/NotificationContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { AdminBlogEditorPage } from './pages/AdminBlogEditorPage'
 import { AdminBlogPage } from './pages/AdminBlogPage'
@@ -29,36 +30,38 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <UserThemeSync />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<Navigate to="/admin" replace />} />
-              <Route path="admin" element={<AdminLayout />}>
-                <Route index element={<AdminOverviewPage />} />
-                <Route path="site" element={<AdminSitePage />} />
-                <Route path="blog" element={<AdminBlogPage />} />
-                <Route path="blog/:id" element={<AdminBlogEditorPage />} />
-                <Route path="monitoring" element={<AdminMonitoringPage />} />
-                <Route path="errors" element={<AdminErrorsPage />} />
-                <Route path="bug-reports" element={<AdminBugReportsPage />} />
-                <Route path="chat-center" element={<AdminChatCenterPage />} />
-                <Route path="live-chat" element={<AdminLiveChatPage />} />
-                <Route path="feature-requests" element={<AdminFeatureRequestsPage />} />
-                <Route path="tickets" element={<AdminTicketsPage />} />
-                <Route path="plans" element={<AdminPlansPage />} />
-                <Route path="users" element={<AdminUsersPage />} />
-                <Route path="users/:userId" element={<AdminUserDetailPage />} />
-                <Route path="projects" element={<AdminProjectsPage />} />
-                <Route path="projects/:projectId" element={<AdminProjectDetailPage />} />
-                <Route path="survey" element={<AdminSurveyPage />} />
+        <NotificationProvider>
+          <UserThemeSync />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<Navigate to="/admin" replace />} />
+                <Route path="admin" element={<AdminLayout />}>
+                  <Route index element={<AdminOverviewPage />} />
+                  <Route path="site" element={<AdminSitePage />} />
+                  <Route path="blog" element={<AdminBlogPage />} />
+                  <Route path="blog/:id" element={<AdminBlogEditorPage />} />
+                  <Route path="monitoring" element={<AdminMonitoringPage />} />
+                  <Route path="errors" element={<AdminErrorsPage />} />
+                  <Route path="bug-reports" element={<AdminBugReportsPage />} />
+                  <Route path="chat-center" element={<AdminChatCenterPage />} />
+                  <Route path="live-chat" element={<AdminLiveChatPage />} />
+                  <Route path="feature-requests" element={<AdminFeatureRequestsPage />} />
+                  <Route path="tickets" element={<AdminTicketsPage />} />
+                  <Route path="plans" element={<AdminPlansPage />} />
+                  <Route path="users" element={<AdminUsersPage />} />
+                  <Route path="users/:userId" element={<AdminUserDetailPage />} />
+                  <Route path="projects" element={<AdminProjectsPage />} />
+                  <Route path="projects/:projectId" element={<AdminProjectDetailPage />} />
+                  <Route path="survey" element={<AdminSurveyPage />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>
-              <Route path="*" element={<Navigate to="/admin" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   )

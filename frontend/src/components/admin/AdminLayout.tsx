@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 import { BugReportFab } from '../BugReportFab'
 import { LiveChatFab } from '../LiveChatFab'
+import { NotificationBell } from '../NotificationBell'
+import { NotificationToasts } from '../NotificationToasts'
 import { ThemeToggle } from '../ThemeToggle'
 import { useAuth } from '../../context/AuthContext'
 import { btnBase, btnCompact } from '../../lib/classes'
@@ -154,8 +156,12 @@ export function AdminLayout() {
           >
             <Menu className="size-4" />
           </button>
-          <div className="text-sm font-semibold text-foreground">Admin</div>
+          <div className="flex-1 text-sm font-semibold text-foreground">Admin</div>
+          <NotificationBell />
         </header>
+        <div className="sticky top-0 z-20 hidden items-center justify-end gap-2 border-b border-border bg-surface-elevated/80 px-6 py-3 backdrop-blur-md lg:flex">
+          <NotificationBell />
+        </div>
         <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-6xl">
             <Outlet />
@@ -163,6 +169,7 @@ export function AdminLayout() {
         </main>
       </div>
 
+      <NotificationToasts />
       <div className="fixed bottom-5 right-5 z-50 flex flex-col-reverse items-end gap-3">
         <BugReportFab />
         <LiveChatFab />
