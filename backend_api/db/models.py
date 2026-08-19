@@ -147,6 +147,18 @@ class User(Base):
         foreign_keys="ChatSession.agent_id",
         lazy="noload",
     )
+    chat_reads: Mapped[list["ChatRead"]] = relationship(
+        "ChatRead",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="noload",
+    )
+    notifications: Mapped[list["Notification"]] = relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="noload",
+    )
     feature_requests: Mapped[list["FeatureRequest"]] = relationship(
         "FeatureRequest",
         back_populates="user",
@@ -447,6 +459,12 @@ class ChatSession(Base):
         lazy="noload",
         order_by="ChatMessage.created_at",
     )
+    reads: Mapped[list["ChatRead"]] = relationship(
+        "ChatRead",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        lazy="noload",
+    )
 
 
 class ChatMessage(Base):
@@ -475,6 +493,76 @@ class ChatMessage(Base):
 
     session: Mapped[ChatSession] = relationship("ChatSession", back_populates="messages")
     sender: Mapped[User] = relationship("User")
+
+
+class ChatRead(Base):
+    """Per-user read cursor for a live chat session."""
+
+    __tablename__ = "chat_reads"
+    __table_args__ = (
+        UniqueConstraint(
+            "chat_session_id",
+            "user_id",
+            name="uq_chat_reads_session_user",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_session_id: Mapped[int] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    last_read_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    session: Mapped[ChatSession] = relationship(
+        "ChatSession",
+        back_populates="reads",
+    )
+    user: Mapped[User] = relationship(
+        "User",
+        back_populates="chat_reads",
+    )
+
+
+class Notification(Base):
+    """Persistent in-app notification for a user."""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    chat_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    user: Mapped[User] = relationship("User", back_populates="notifications")
+    chat: Mapped[ChatSession | None] = relationship("ChatSession")
 
 
 class FeatureRequest(Base):
