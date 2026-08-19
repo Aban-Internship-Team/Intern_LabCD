@@ -21,6 +21,7 @@ from backend_api.http.routers import (
     errors,
     feature_requests,
     health,
+    notifications,
     site,
     survey,
     tickets,
@@ -96,6 +97,8 @@ def create_app() -> FastAPI:
     app.include_router(bug_reports.router, prefix=API_PREFIX)
     app.include_router(chats.router, prefix=API_PREFIX)
     app.include_router(chats.ws_router)  # /ws/chats/{chat_id} (no API prefix)
+    app.include_router(notifications.router, prefix=API_PREFIX)
+    app.include_router(notifications.ws_router)  # /ws/notifications (no API prefix)
     app.include_router(feature_requests.router, prefix=API_PREFIX)
     app.include_router(tickets.router, prefix=API_PREFIX)
     app.include_router(errors.router, prefix=API_PREFIX)
