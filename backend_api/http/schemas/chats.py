@@ -45,6 +45,10 @@ class ChatSessionListItem(BaseModel):
     status: str
     created_at: datetime
     closed_at: datetime | None
+    unread_count: int = 0
+    last_message_preview: str | None = None
+    last_message_at: datetime | None = None
+    peer_online: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -53,3 +57,8 @@ class ChatSessionCreate(BaseModel):
     """Optional first message when opening a session."""
 
     message: str | None = Field(None, min_length=1, max_length=8000)
+
+
+class ChatReadOut(BaseModel):
+    chat_id: int
+    unread_count: int = 0
