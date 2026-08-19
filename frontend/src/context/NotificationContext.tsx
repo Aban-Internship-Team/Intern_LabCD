@@ -2,12 +2,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react'
 import type { AppNotification } from '../api/types'
+import { chatCenterApi } from '../api/chatCenter'
+import { getAuthToken } from '../api/client'
 
 export interface ToastItem {
   id: number
@@ -26,43 +29,16 @@ interface NotificationContextValue {
   markRead: (id: number) => void
   markAllRead: () => void
   dismissToast: (id: number) => void
+  refreshNotifications: () => Promise<void>
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(null)
 
-const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: 1,
-    type: 'chat_message',
-    title: 'New chat message',
-    body: 'alex@example.com: The export button still returns 500.',
-    chat_id: 101,
-    read: false,
-    created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
-  },
-  {
-    id: 2,
-    type: 'chat_message',
-    title: 'New chat message',
-    body: 'sam@example.com: Hi — need help with my plan upgrade.',
-    chat_id: 102,
-    read: false,
-    created_at: new Date(Date.now() - 25 * 60_000).toISOString(),
-  },
-  {
-    id: 3,
-    type: 'chat_message',
-    title: 'Chat closed',
-    body: 'Conversation #103 was closed.',
-    chat_id: 103,
-    read: true,
-    created_at: new Date(Date.now() - 3 * 3600_000).toISOString(),
-  },
-]
-
 function playSoftChime(): void {
   try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AudioCtx) return
     const ctx = new AudioCtx()
     const oscillator = ctx.createOscillator()
@@ -77,15 +53,20 @@ function playSoftChime(): void {
     oscillator.stop(ctx.currentTime + 0.4)
     window.setTimeout(() => void ctx.close(), 500)
   } catch {
-    // Ignore autoplay / AudioContext failures.
+    // Browsers may block audio until the user interacts with the page.
   }
 }
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS)
+  const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const [soundEnabled, setSoundEnabled] = useState(true)
   const toastSeq = useRef(1)
+  const soundEnabledRef = useRef(soundEnabled)
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled
+  }, [soundEnabled])
 
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((item) => item.id !== id))
@@ -100,36 +81,103 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         return [notification, ...prev]
       })
 
-      if (options?.silent) return
+      window.dispatchEvent(
+        new CustomEvent('chat-center:notification', { detail: notification }),
+      )
 
+      if (options?.silent) return
       const toastId = toastSeq.current++
-      setToasts((prev) => [
-        {
-          id: toastId,
-          title: notification.title,
-          body: notification.body,
-          chatId: notification.chat_id,
-        },
-        ...prev,
-      ].slice(0, 3))
+      setToasts((prev) =>
+        [
+          {
+            id: toastId,
+            title: notification.title,
+            body: notification.body,
+            chatId: notification.chat_id,
+          },
+          ...prev,
+        ].slice(0, 3),
+      )
       window.setTimeout(() => dismissToast(toastId), 4200)
 
-      if (soundEnabled && !notification.read) {
-        playSoftChime()
-      }
+      if (soundEnabledRef.current && !notification.read) playSoftChime()
     },
-    [dismissToast, soundEnabled],
+    [dismissToast],
   )
+
+  const refreshNotifications = useCallback(async () => {
+    if (!getAuthToken()) {
+      setNotifications([])
+      return
+    }
+    try {
+      const rows = await chatCenterApi.listNotifications()
+      setNotifications(rows)
+    } catch {
+      // Keep the last known state. Auth/API errors are handled by the shared client.
+    }
+  }, [])
 
   const markRead = useCallback((id: number) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, read: true } : item)),
     )
-  }, [])
+    void chatCenterApi.markNotificationRead(id).catch(() => void refreshNotifications())
+  }, [refreshNotifications])
 
   const markAllRead = useCallback(() => {
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })))
-  }, [])
+    void chatCenterApi.markAllNotificationsRead().catch(() => void refreshNotifications())
+  }, [refreshNotifications])
+
+  useEffect(() => {
+    let socket: WebSocket | null = null
+    let reconnectTimer: number | null = null
+    let stopped = false
+
+    const connect = () => {
+      if (stopped) return
+      const url = chatCenterApi.notificationWsUrl()
+      if (!url) {
+        reconnectTimer = window.setTimeout(connect, 1500)
+        return
+      }
+
+      void refreshNotifications()
+      socket = new WebSocket(url)
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as {
+            type?: string
+            payload?: AppNotification
+          }
+          if (data.type === 'notification' && data.payload) {
+            pushNotification(data.payload)
+          } else if (data.type === 'unread_summary') {
+            void refreshNotifications()
+          }
+        } catch {
+          // Ignore malformed socket frames.
+        }
+      }
+      socket.onclose = () => {
+        if (!stopped) reconnectTimer = window.setTimeout(connect, 1500)
+      }
+      socket.onerror = () => socket?.close()
+    }
+
+    connect()
+    const refreshTimer = window.setInterval(() => {
+      if (getAuthToken()) void refreshNotifications()
+    }, 30_000)
+
+    return () => {
+      stopped = true
+      if (reconnectTimer != null) window.clearTimeout(reconnectTimer)
+      window.clearInterval(refreshTimer)
+      socket?.close()
+    }
+  }, [pushNotification, refreshNotifications])
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.read).length,
@@ -147,6 +195,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       markRead,
       markAllRead,
       dismissToast,
+      refreshNotifications,
     }),
     [
       notifications,
@@ -157,18 +206,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       markRead,
       markAllRead,
       dismissToast,
+      refreshNotifications,
     ],
   )
 
-  return (
-    <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>
-  )
+  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>
 }
 
 export function useNotifications(): NotificationContextValue {
   const ctx = useContext(NotificationContext)
-  if (!ctx) {
-    throw new Error('useNotifications must be used within NotificationProvider')
-  }
+  if (!ctx) throw new Error('useNotifications must be used within NotificationProvider')
   return ctx
 }

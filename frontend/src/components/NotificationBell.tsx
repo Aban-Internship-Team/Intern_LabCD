@@ -18,7 +18,6 @@ export function NotificationBell() {
     setSoundEnabled,
     markRead,
     markAllRead,
-    pushNotification,
   } = useNotifications()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -42,19 +41,6 @@ export function NotificationBell() {
   }, [open])
 
   const latest = notifications.slice(0, 8)
-
-  const demoPush = () => {
-    pushNotification({
-      id: Date.now(),
-      type: 'chat_message',
-      title: 'New chat message',
-      body: 'Demo: a support user just sent a new reply.',
-      chat_id: 101,
-      read: false,
-      created_at: new Date().toISOString(),
-    })
-    setOpen(true)
-  }
 
   return (
     <div ref={rootRef} className="relative">
@@ -84,7 +70,7 @@ export function NotificationBell() {
             <div>
               <div className="text-sm font-semibold text-foreground">Notifications</div>
               <div className="text-[0.7rem] text-muted-text">
-                {unreadCount} unread · mock feed until API is live
+                {unreadCount} unread
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -138,10 +124,7 @@ export function NotificationBell() {
             )}
           </ul>
 
-          <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
-            <button type="button" className={`${btnBase} ${btnCompact}`} onClick={demoPush}>
-              Demo toast
-            </button>
+          <div className="flex items-center justify-end border-t border-border px-3 py-2">
             <Link
               to="/admin/chat-center"
               className="text-xs font-medium text-primary hover:underline"
