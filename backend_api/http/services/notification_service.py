@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from collections import defaultdict
 
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
 
 from backend_api.db.models import ChatMessage, ChatSession, Notification, User
+from backend_api.http.ws_json import dumps_ws_payload
 
 NOTIFICATION_TYPE_CHAT_MESSAGE = "chat_message"
 BODY_PREVIEW_LENGTH = 220
@@ -35,7 +35,7 @@ class NotificationConnectionManager:
     async def send_to_user(self, user_id: int, payload: dict) -> None:
         sockets = list(self._connections.get(user_id, ()))
         dead: list[WebSocket] = []
-        data = json.dumps(payload, default=str)
+        data = dumps_ws_payload(payload)
         for websocket in sockets:
             try:
                 await websocket.send_text(data)
@@ -107,6 +107,22 @@ def mark_all_read(db: Session, user: User) -> int:
     updated = (
         db.query(Notification)
         .filter(Notification.user_id == user.id, Notification.read.is_(False))
+        .update({Notification.read: True}, synchronize_session=False)
+    )
+    db.commit()
+    return int(updated)
+
+
+def mark_chat_notifications_read(db: Session, user: User, chat_id: int) -> int:
+    """Mark the current user's notifications for one chat as read."""
+
+    updated = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user.id,
+            Notification.chat_id == chat_id,
+            Notification.read.is_(False),
+        )
         .update({Notification.read: True}, synchronize_session=False)
     )
     db.commit()

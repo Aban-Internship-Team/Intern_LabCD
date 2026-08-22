@@ -25,7 +25,7 @@ export function NotificationToasts() {
               <p className="mt-1 line-clamp-2 text-xs text-muted-text">{toast.body}</p>
               {toast.chatId != null && (
                 <Link
-                  to="/admin/chat-center"
+                  to={`/admin/chat-center?chat=${toast.chatId}`}
                   className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
                   onClick={() => dismissToast(toast.id)}
                 >

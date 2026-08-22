@@ -9,6 +9,7 @@ import type {
   BugReportSettings,
   ChatMessage,
   ChatMessageCreate,
+  ChatReadResult,
   ChatSession,
   ChatSessionCreate,
   ChatSessionListItem,
@@ -428,6 +429,8 @@ export const chatsApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  markRead: (chatId: number) =>
+    apiFetch<ChatReadResult>(`/chats/${chatId}/read`, { method: 'POST' }),
 }
 
 export const featureRequestsApi = {

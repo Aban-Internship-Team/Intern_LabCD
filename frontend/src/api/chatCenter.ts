@@ -1,5 +1,6 @@
 import { apiFetch, getAuthToken } from './client'
 import { chatsApi } from './endpoints'
+import { buildChatWebSocketUrl, buildNotificationWebSocketUrl } from './chatSocket'
 import type {
   AppNotification,
   ChatMessage,
@@ -8,26 +9,12 @@ import type {
   NotificationUnreadCount,
 } from './types'
 
-function wsBase(): string {
-  const explicit = import.meta.env.VITE_WS_BASE_URL as string | undefined
-  if (explicit) return explicit.replace(/\/$/, '')
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}`
-}
-
-function withToken(path: string): string | null {
-  const token = getAuthToken()
-  if (!token) return null
-  return `${wsBase()}${path}?access_token=${encodeURIComponent(token)}`
-}
-
 export const chatCenterApi = {
   listChats: (): Promise<ChatSessionListItem[]> => chatsApi.list({ status: 'all' }),
   listMessages: (chatId: number): Promise<ChatMessage[]> => chatsApi.listMessages(chatId),
   sendMessage: (chatId: number, message: string): Promise<ChatMessage> =>
     chatsApi.sendMessage(chatId, { message }),
-  markChatRead: (chatId: number): Promise<ChatReadResult> =>
-    apiFetch<ChatReadResult>(`/chats/${chatId}/read`, { method: 'POST' }),
+  markChatRead: (chatId: number): Promise<ChatReadResult> => chatsApi.markRead(chatId),
 
   listNotifications: (): Promise<AppNotification[]> =>
     apiFetch<AppNotification[]>('/notifications'),
@@ -38,6 +25,12 @@ export const chatCenterApi = {
   markAllNotificationsRead: (): Promise<NotificationUnreadCount> =>
     apiFetch<NotificationUnreadCount>('/notifications/read-all', { method: 'POST' }),
 
-  notificationWsUrl: (): string | null => withToken('/ws/notifications'),
-  chatWsUrl: (chatId: number): string | null => withToken(`/ws/chats/${chatId}`),
+  notificationWsUrl: (): string | null => {
+    const token = getAuthToken()
+    return token ? buildNotificationWebSocketUrl(token) : null
+  },
+  chatWsUrl: (chatId: number): string | null => {
+    const token = getAuthToken()
+    return token ? buildChatWebSocketUrl(chatId, token) : null
+  },
 }

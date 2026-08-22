@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
 
@@ -12,6 +10,7 @@ from backend_api.db.session import SessionLocal, get_db
 from backend_api.http.dependencies import get_current_user
 from backend_api.http.schemas.notifications import NotificationOut, NotificationUnreadCount
 from backend_api.http.services import auth_service, chat_service, notification_service
+from backend_api.http.ws_json import dumps_ws_payload
 
 router = APIRouter(tags=["notifications"])
 ws_router = APIRouter(tags=["notifications"])
@@ -85,7 +84,7 @@ async def notifications_websocket(websocket: WebSocket) -> None:
 
         await notification_service.manager.connect(user.id, websocket)
         await websocket.send_text(
-            json.dumps(
+            dumps_ws_payload(
                 {
                     "type": "unread_summary",
                     "chat_unread_total": chat_service.total_unread_count(db, user),

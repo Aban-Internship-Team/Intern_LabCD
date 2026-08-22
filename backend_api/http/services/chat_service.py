@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -11,6 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from backend_api.db.models import ChatMessage, ChatRead, ChatSession, User
+from backend_api.http.ws_json import dumps_ws_payload
 
 CHAT_STATUS_OPEN = "open"
 CHAT_STATUS_ACTIVE = "active"
@@ -53,7 +53,7 @@ class ConnectionManager:
     async def broadcast(self, chat_id: int, payload: dict) -> None:
         sockets = list(self._rooms.get(chat_id, ()))
         dead: list[WebSocket] = []
-        data = json.dumps(payload, default=str)
+        data = dumps_ws_payload(payload)
         for websocket in sockets:
             try:
                 await websocket.send_text(data)

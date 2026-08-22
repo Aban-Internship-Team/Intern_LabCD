@@ -1,7 +1,8 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageSquare, RefreshCw, Search } from 'lucide-react'
 import type { ChatMessage, ChatSessionListItem } from '../api/types'
+import { ChatWebSocketClient, type ChatSocketEvent } from '../api/chatSocket'
 import { chatCenterApi } from '../api/chatCenter'
 import { ChatThread } from '../components/ChatThread'
 import { useAuth } from '../context/AuthContext'
@@ -30,18 +31,31 @@ function truncate(text: string | null | undefined, max = 56): string {
   return `${value.slice(0, max)}…`
 }
 
+function messageTime(iso: string): number {
+  const value = new Date(iso).getTime()
+  return Number.isNaN(value) ? 0 : value
+}
+
 function mergeMessage(rows: ChatMessage[], message: ChatMessage): ChatMessage[] {
   if (rows.some((item) => item.id === message.id)) {
     return rows.map((item) => (item.id === message.id ? message : item))
   }
-  return [...rows, message].sort((a, b) => a.created_at.localeCompare(b.created_at))
+  return [...rows, message].sort((a, b) => messageTime(a.created_at) - messageTime(b.created_at))
+}
+
+function parseChatQuery(raw: string | null): number | null {
+  if (!raw) return null
+  const value = Number(raw)
+  return Number.isInteger(value) && value > 0 ? value : null
 }
 
 export function AdminChatCenterPage() {
   const { user: currentUser } = useAuth()
-  const { notifications } = useNotifications()
+  const { notifications, setActiveChatId, markNotificationsForChatRead } = useNotifications()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedChatId = parseChatQuery(searchParams.get('chat'))
   const [sessions, setSessions] = useState<ChatSessionListItem[]>([])
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(requestedChatId)
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
   const [messagesByChat, setMessagesByChat] = useState<Record<number, ChatMessage[]>>({})
@@ -49,8 +63,20 @@ export function AdminChatCenterPage() {
   const [threadLoading, setThreadLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const selectedRef = useRef<number | null>(null)
   const lastChatNotificationIdRef = useRef<number | null>(null)
+
+  const selectChat = useCallback(
+    (chatId: number | null) => {
+      setSelectedId(chatId)
+      setDraft('')
+      if (chatId == null) {
+        setSearchParams({}, { replace: true })
+        return
+      }
+      setSearchParams({ chat: String(chatId) }, { replace: true })
+    },
+    [setSearchParams],
+  )
 
   const loadSessions = useCallback(async () => {
     try {
@@ -58,6 +84,8 @@ export function AdminChatCenterPage() {
       setSessions(rows)
       setSelectedId((current) => {
         if (current != null && rows.some((row) => row.id === current)) return current
+        const fromQuery = parseChatQuery(new URLSearchParams(window.location.search).get('chat'))
+        if (fromQuery != null && rows.some((row) => row.id === fromQuery)) return fromQuery
         return rows[0]?.id ?? null
       })
       setError(null)
@@ -73,6 +101,18 @@ export function AdminChatCenterPage() {
   }, [currentUser?.is_admin, loadSessions])
 
   useEffect(() => {
+    if (requestedChatId == null) return
+    if (sessions.some((row) => row.id === requestedChatId)) {
+      setSelectedId(requestedChatId)
+    }
+  }, [requestedChatId, sessions])
+
+  useEffect(() => {
+    setActiveChatId(selectedId)
+    return () => setActiveChatId(null)
+  }, [selectedId, setActiveChatId])
+
+  useEffect(() => {
     const latestChatNotification = notifications.find(
       (notification) => notification.type === 'chat_message' && notification.chat_id != null,
     )
@@ -84,7 +124,6 @@ export function AdminChatCenterPage() {
   }, [notifications, loadSessions])
 
   useEffect(() => {
-    selectedRef.current = selectedId
     if (selectedId == null) return
     let cancelled = false
     setThreadLoading(true)
@@ -98,6 +137,7 @@ export function AdminChatCenterPage() {
         setSessions((prev) =>
           prev.map((row) => (row.id === selectedId ? { ...row, unread_count: 0 } : row)),
         )
+        markNotificationsForChatRead(selectedId)
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load messages')
@@ -109,70 +149,105 @@ export function AdminChatCenterPage() {
     return () => {
       cancelled = true
     }
-  }, [selectedId])
+  }, [selectedId, markNotificationsForChatRead])
+
+  const selected = sessions.find((row) => row.id === selectedId) ?? null
+  const selectedReady = selected != null
+  const closed = selected?.status === 'closed'
 
   useEffect(() => {
-    if (selectedId == null) return
-    const url = chatCenterApi.chatWsUrl(selectedId)
-    if (!url) return
-    let socket: WebSocket | null = new WebSocket(url)
-    let reconnectTimer: number | null = null
-    let stopped = false
+    if (selectedId == null || !selectedReady || closed) return
 
-    const attachHandlers = (ws: WebSocket) => {
-      ws.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data) as Record<string, unknown>
-          if (payload.type === 'message') {
-            const message: ChatMessage = {
-              id: Number(payload.id),
-              chat_session_id: Number(payload.chat_session_id),
-              sender_id: Number(payload.sender_id),
-              sender_email: (payload.sender_email as string | null) ?? null,
-              message: String(payload.message ?? ''),
-              created_at: String(payload.created_at ?? new Date().toISOString()),
-            }
-            setMessagesByChat((prev) => ({
-              ...prev,
-              [selectedId]: mergeMessage(prev[selectedId] ?? [], message),
-            }))
-            if (message.sender_id !== currentUser?.id) {
-              void chatCenterApi.markChatRead(selectedId)
-            }
-            void loadSessions()
-          } else if (payload.type === 'presence' || payload.type === 'status') {
-            void loadSessions()
-          }
-        } catch {
-          // Ignore malformed frames and keep the REST-loaded thread visible.
+    let stopped = false
+    let reconnectTimer: number | null = null
+    let client: ChatWebSocketClient | null = null
+
+    const handleEvent = (event: ChatSocketEvent) => {
+      if (event.type === 'message') {
+        const message: ChatMessage = {
+          id: event.id,
+          chat_session_id: event.chat_session_id,
+          sender_id: event.sender_id,
+          sender_email: event.sender_email,
+          message: event.message,
+          created_at: event.created_at,
         }
-      }
-      ws.onclose = () => {
-        if (!stopped) {
-          reconnectTimer = window.setTimeout(() => {
-            const nextUrl = chatCenterApi.chatWsUrl(selectedId)
-            if (!nextUrl || stopped) return
-            socket = new WebSocket(nextUrl)
-            attachHandlers(socket)
-          }, 1500)
+        setMessagesByChat((prev) => ({
+          ...prev,
+          [selectedId]: mergeMessage(prev[selectedId] ?? [], message),
+        }))
+        setSessions((prev) =>
+          prev.map((row) =>
+            row.id === selectedId
+              ? {
+                  ...row,
+                  last_message_preview: message.message,
+                  last_message_at: message.created_at,
+                  unread_count: message.sender_id === currentUser?.id ? row.unread_count : 0,
+                }
+              : row,
+          ),
+        )
+        if (message.sender_id !== currentUser?.id) {
+          void chatCenterApi.markChatRead(selectedId)
+          markNotificationsForChatRead(selectedId)
         }
+        return
       }
-      ws.onerror = () => ws.close()
+
+      if (event.type === 'presence') {
+        setSessions((prev) =>
+          prev.map((row) => {
+            if (row.id !== event.chat_id) return row
+            const peerId = currentUser?.id === row.user_id ? row.agent_id : row.user_id
+            if (peerId !== event.user_id) return row
+            return { ...row, peer_online: event.online }
+          }),
+        )
+        return
+      }
+
+      if (event.type === 'status') {
+        setSessions((prev) =>
+          prev.map((row) =>
+            row.id === event.id
+              ? { ...row, status: event.status, closed_at: event.closed_at ?? row.closed_at }
+              : row,
+          ),
+        )
+      }
     }
 
-    attachHandlers(socket)
+    const connect = () => {
+      if (stopped) return
+      client = new ChatWebSocketClient(selectedId, {
+        onEvent: handleEvent,
+        onClose: (event) => {
+          if (stopped) return
+          if (event.code === 4401 || event.code === 4403 || event.code === 4409) return
+          reconnectTimer = window.setTimeout(connect, 1500)
+        },
+      })
+      client.connect()
+    }
+
+    connect()
     return () => {
       stopped = true
       if (reconnectTimer != null) window.clearTimeout(reconnectTimer)
-      socket?.close()
-      socket = null
+      client?.disconnect()
     }
-  }, [selectedId, currentUser?.id, loadSessions])
+  }, [selectedId, selectedReady, closed, currentUser?.id, markNotificationsForChatRead])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return sessions
-    return sessions.filter((row) =>
+    const sorted = [...sessions].sort((a, b) => {
+      const aTime = messageTime(a.last_message_at ?? a.created_at)
+      const bTime = messageTime(b.last_message_at ?? b.created_at)
+      return bTime - aTime
+    })
+    if (!q) return sorted
+    return sorted.filter((row) =>
       [row.user_email, row.agent_email, row.last_message_preview, row.status, String(row.id)]
         .filter(Boolean)
         .join(' ')
@@ -183,9 +258,7 @@ export function AdminChatCenterPage() {
 
   if (!currentUser?.is_admin) return <Navigate to="/login" replace />
 
-  const selected = sessions.find((row) => row.id === selectedId) ?? null
   const messages = selected ? (messagesByChat[selected.id] ?? []) : []
-  const closed = selected?.status === 'closed'
 
   const markSelectedRead = async () => {
     if (!selected) return
@@ -194,6 +267,7 @@ export function AdminChatCenterPage() {
       setSessions((prev) =>
         prev.map((row) => (row.id === selected.id ? { ...row, unread_count: 0 } : row)),
       )
+      markNotificationsForChatRead(selected.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark conversation as read')
     }
@@ -210,8 +284,21 @@ export function AdminChatCenterPage() {
         ...prev,
         [selected.id]: mergeMessage(prev[selected.id] ?? [], message),
       }))
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.id === selected.id
+            ? {
+                ...row,
+                last_message_preview: message.message,
+                last_message_at: message.created_at,
+                status: row.status === 'open' ? 'active' : row.status,
+                agent_id: row.agent_id ?? currentUser.id,
+                agent_email: row.agent_email ?? currentUser.email,
+              }
+            : row,
+        ),
+      )
       setDraft('')
-      await loadSessions()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message')
     } finally {
@@ -277,10 +364,7 @@ export function AdminChatCenterPage() {
                       className={`flex w-full flex-col gap-1 px-4 py-3 text-left transition ${
                         active ? 'bg-surface-muted' : 'hover:bg-surface-hover'
                       }`}
-                      onClick={() => {
-                        setSelectedId(row.id)
-                        setDraft('')
-                      }}
+                      onClick={() => selectChat(row.id)}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-medium text-foreground">

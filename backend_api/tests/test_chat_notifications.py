@@ -87,6 +87,39 @@ def test_mark_chat_read_clears_unread(chat_client, normal_user, admin_user):
     assert after["unread_count"] == 0
 
 
+def test_mark_chat_read_marks_matching_notifications_read(
+    chat_client,
+    normal_user,
+    admin_user,
+):
+    chat = create_chat(chat_client, normal_user, "Please help with export").json()
+
+    before = chat_client.get("/api/notifications", headers=auth_headers(admin_user)).json()
+    assert len(before) == 1
+    assert before[0]["chat_id"] == chat["id"]
+    assert before[0]["read"] is False
+
+    other = create_chat(chat_client, normal_user, "A second conversation").json()
+    rows = chat_client.get("/api/notifications", headers=auth_headers(admin_user)).json()
+    assert len(rows) == 2
+
+    resp = chat_client.post(
+        f"/api/chats/{chat['id']}/read",
+        headers=auth_headers(admin_user),
+    )
+    assert resp.status_code == 200
+
+    after = chat_client.get("/api/notifications", headers=auth_headers(admin_user)).json()
+    by_chat = {item["chat_id"]: item for item in after}
+    assert by_chat[chat["id"]]["read"] is True
+    assert by_chat[other["id"]]["read"] is False
+    count = chat_client.get(
+        "/api/notifications/unread-count",
+        headers=auth_headers(admin_user),
+    )
+    assert count.json() == {"count": 1}
+
+
 def test_user_cannot_mark_someone_elses_chat_read(
     chat_client,
     normal_user,

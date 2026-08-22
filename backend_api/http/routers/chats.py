@@ -110,6 +110,7 @@ async def mark_chat_read(
     session = chat_service.get_session(db, chat_id)
     _require_session_access(user, session)
     unread_count = chat_service.mark_read(db, session, user)
+    notification_service.mark_chat_notifications_read(db, user, chat_id)
     await notification_service.manager.send_to_user(
         user.id,
         {
@@ -138,7 +139,7 @@ def join_chat(
 
 
 @router.patch("/chats/{chat_id}/close", response_model=ChatSessionOut)
-def close_chat(
+async def close_chat(
     chat_id: int,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -146,6 +147,7 @@ def close_chat(
     session = chat_service.get_session(db, chat_id)
     _require_session_access(user, session)
     updated = chat_service.close_session(db, session)
+    await chat_service.manager.broadcast(chat_id, chat_service.status_event_payload(updated))
     return ChatSessionOut.model_validate(chat_service.session_to_out(updated))
 
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bell, Volume2, VolumeX } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useNotifications } from '../context/NotificationContext'
 import { btnBase, btnCompact } from '../lib/classes'
 
@@ -19,6 +19,7 @@ export function NotificationBell() {
     markRead,
     markAllRead,
   } = useNotifications()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -108,7 +109,13 @@ export function NotificationBell() {
                     className={`flex w-full flex-col gap-1 px-3 py-2.5 text-left transition hover:bg-surface-hover ${
                       item.read ? 'opacity-80' : 'bg-[color-mix(in_srgb,var(--app-primary)_6%,transparent)]'
                     }`}
-                    onClick={() => markRead(item.id)}
+                    onClick={() => {
+                      markRead(item.id)
+                      setOpen(false)
+                      if (item.chat_id != null) {
+                        navigate(`/admin/chat-center?chat=${item.chat_id}`)
+                      }
+                    }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-sm font-medium text-foreground">{item.title}</span>

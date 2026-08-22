@@ -54,11 +54,19 @@ export function getChatWebSocketBaseUrl(): string {
   return `${protocol}//${window.location.host}`
 }
 
-export function buildChatWebSocketUrl(chatId: number, token?: string | null): string {
+function withAccessToken(path: string, token?: string | null): string {
   const accessToken = token === undefined ? getAuthToken() : token
   const base = getChatWebSocketBaseUrl()
   const query = accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : ''
-  return `${base}/ws/chats/${chatId}${query}`
+  return `${base}${path}${query}`
+}
+
+export function buildChatWebSocketUrl(chatId: number, token?: string | null): string {
+  return withAccessToken(`/ws/chats/${chatId}`, token)
+}
+
+export function buildNotificationWebSocketUrl(token?: string | null): string {
+  return withAccessToken('/ws/notifications', token)
 }
 
 export class ChatWebSocketClient {

@@ -313,10 +313,10 @@ export interface ChatSessionListItem {
   status: ChatSessionStatus | string
   created_at: string
   closed_at: string | null
-  unread_count?: number
-  last_message_preview?: string | null
-  last_message_at?: string | null
-  peer_online?: boolean
+  unread_count: number
+  last_message_preview: string | null
+  last_message_at: string | null
+  peer_online: boolean
 }
 
 export interface ChatSessionCreate {
